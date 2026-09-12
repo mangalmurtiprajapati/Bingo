@@ -24,6 +24,12 @@ data class LineStrike(
     val cellIndices: List<Pair<Int, Int>> // (row, col)
 )
 
+data class CompletedLineInfo(
+    val letter: Char,
+    val lineStrike: LineStrike,
+    val numbers: List<Int>
+)
+
 data class ClassicBingoBoard(
     val cells: List<List<Int?>> = List(5) { List(5) { null } },
     val crossedNumbers: Set<Int> = emptySet()
@@ -102,6 +108,16 @@ data class ClassicBingoBoard(
                 val num = cells.getOrNull(r)?.getOrNull(c)
                 num != null && crossedNumbers.contains(num)
             }
+        }
+    }
+
+    fun getCompletedLineInfos(): List<CompletedLineInfo> {
+        val bingoLetters = listOf('B', 'I', 'N', 'G', 'O')
+        val completed = getCompletedLines()
+        return completed.mapIndexed { index, strike ->
+            val letter = if (index < 5) bingoLetters[index] else '+'
+            val numbersInLine = strike.cellIndices.mapNotNull { (r, c) -> cells.getOrNull(r)?.getOrNull(c) }
+            CompletedLineInfo(letter = letter, lineStrike = strike, numbers = numbersInLine)
         }
     }
 

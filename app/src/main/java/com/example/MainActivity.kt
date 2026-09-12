@@ -72,6 +72,7 @@ fun LuckyBingoApp(
             HomeScreen(
                 stats = stats,
                 activeTheme = activeTheme,
+                onToggleSound = { viewModel.toggleSound() },
                 onStartClassicGame = { mode ->
                     viewModel.initClassicGame(mode)
                     if (mode == GameMode.PLAY_ONLINE) {
@@ -98,6 +99,8 @@ fun LuckyBingoApp(
             BoardSetupScreen(
                 state = classicState,
                 theme = activeTheme,
+                isSoundMuted = !stats.isSoundEnabled,
+                onToggleSound = { viewModel.toggleSound() },
                 onAssignCell = { r, c ->
                     viewModel.assignPlayerCell(r, c)
                 },
@@ -123,6 +126,8 @@ fun LuckyBingoApp(
             ClassicBingoGameScreen(
                 state = classicState,
                 theme = activeTheme,
+                isSoundMuted = !stats.isSoundEnabled,
+                onToggleSound = { viewModel.toggleSound() },
                 onCutNumber = { number ->
                     viewModel.cutNumber(number)
                 },

@@ -27,13 +27,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Celebration
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.foundation.clickable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -66,6 +73,7 @@ import com.example.model.MatchOutcome
 import com.example.model.MatchTurn
 import com.example.ui.components.BingoLettersBar
 import com.example.ui.components.ClassicBingoGrid
+import com.example.ui.components.WinningLineVerificationDialog
 import com.example.viewmodel.ClassicMatchState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -73,11 +81,15 @@ import com.example.viewmodel.ClassicMatchState
 fun ClassicBingoGameScreen(
     state: ClassicMatchState,
     theme: BingoTheme,
+    isSoundMuted: Boolean = false,
+    onToggleSound: () -> Unit = {},
     onCutNumber: (Int) -> Unit,
     onRematch: () -> Unit,
     onSwitchBoard: (Int) -> Unit,
     onBackToHome: () -> Unit
 ) {
+    var showVerificationDialog by remember { mutableStateOf(false) }
+
     val isFriendMode = state.gameMode == GameMode.PLAY_WITH_FRIEND
     val viewingBoard = if (isFriendMode && state.viewingBoardPlayer == 2) {
         state.player2OrComputerBoard
@@ -136,6 +148,24 @@ fun ClassicBingoGameScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onToggleSound) {
+                        Icon(
+                            imageVector = if (isSoundMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
+                            contentDescription = if (isSoundMuted) "Unmute Audio" else "Mute Audio",
+                            tint = Color.White
+                        )
+                    }
+
+                    if (state.matchOutcome != MatchOutcome.IN_PROGRESS) {
+                        IconButton(onClick = { showVerificationDialog = true }) {
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = "Verify Lines",
+                                tint = Color(0xFFFFD700)
+                            )
+                        }
+                    }
+
                     if (isFriendMode) {
                         OutlinedButton(
                             onClick = {
@@ -476,6 +506,25 @@ fun ClassicBingoGameScreen(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Button(
+                        onClick = { showVerificationDialog = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp)
+                            .testTag("verify_lines_button"),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E5FF)),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Icon(Icons.Default.Search, contentDescription = null, tint = Color(0xFF002233))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "🔍 Verify 5 Lines (Check Kaise Bani)",
+                            color = Color(0xFF002233),
+                            fontWeight = FontWeight.Black,
+                            fontSize = 14.sp
+                        )
+                    }
+
+                    Button(
                         onClick = onRematch,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -508,5 +557,17 @@ fun ClassicBingoGameScreen(
                 }
             }
         }
+    }
+
+    // 6. Winning Line Verification Proof Inspector
+    if (showVerificationDialog) {
+        WinningLineVerificationDialog(
+            player1Board = state.player1Board,
+            player2OrComputerBoard = state.player2OrComputerBoard,
+            gameMode = state.gameMode,
+            matchOutcome = state.matchOutcome,
+            theme = theme,
+            onDismiss = { showVerificationDialog = false }
+        )
     }
 }

@@ -21,6 +21,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.EmojiEvents
@@ -69,6 +71,7 @@ import androidx.compose.material.icons.filled.Public
 fun HomeScreen(
     stats: UserStats,
     activeTheme: BingoTheme,
+    onToggleSound: () -> Unit = {},
     onStartClassicGame: (GameMode) -> Unit,
     onStartGame: (cardCount: Int, difficulty: GameDifficulty) -> Unit,
     onNavigateSpinWheel: () -> Unit,
@@ -125,31 +128,54 @@ fun HomeScreen(
                     }
                 }
 
-                // Level Badge
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E0038)),
-                    shape = RoundedCornerShape(20.dp),
-                    modifier = Modifier.border(1.dp, activeTheme.primaryColor, RoundedCornerShape(20.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    // Level Badge
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E0038)),
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier.border(1.dp, activeTheme.primaryColor, RoundedCornerShape(20.dp))
                     ) {
-                        Text(
-                            text = "LVL ${stats.level}",
-                            color = activeTheme.primaryColor,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        LinearProgressIndicator(
-                            progress = { stats.xp.toFloat() / stats.xpForNextLevel },
-                            modifier = Modifier
-                                .width(60.dp)
-                                .height(8.dp)
-                                .clip(RoundedCornerShape(4.dp)),
-                            color = Color(0xFF00FFCC),
-                            trackColor = Color.White.copy(alpha = 0.2f)
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "LVL ${stats.level}",
+                                color = activeTheme.primaryColor,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            LinearProgressIndicator(
+                                progress = { stats.xp.toFloat() / stats.xpForNextLevel },
+                                modifier = Modifier
+                                    .width(55.dp)
+                                    .height(8.dp)
+                                    .clip(RoundedCornerShape(4.dp)),
+                                color = Color(0xFF00FFCC),
+                                trackColor = Color.White.copy(alpha = 0.2f)
+                            )
+                        }
+                    }
+
+                    // Quick Sound Mute/Unmute Toggle
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF2A004E))
+                            .border(1.2.dp, Color(0xFFFFD700).copy(alpha = 0.6f), CircleShape)
+                            .clickable { onToggleSound() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (stats.isSoundEnabled) Icons.AutoMirrored.Filled.VolumeUp else Icons.AutoMirrored.Filled.VolumeOff,
+                            contentDescription = "Toggle Audio",
+                            tint = if (stats.isSoundEnabled) Color(0xFFFFD700) else Color.White.copy(alpha = 0.6f),
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }

@@ -35,7 +35,8 @@ class SoundManager(private val context: Context) {
     }
 
     /**
-     * Plays a brief synthesized sound wave using AudioTrack to guarantee offline sound without external assets.
+     * Plays a smooth synthesized sound wave using AudioTrack with raised cosine envelope
+     * to eliminate any audio pops or clicks.
      */
     private fun playTone(frequencyHz: Double, durationMs: Int, volumeMultiplier: Float = 0.5f) {
         if (!isSoundEnabled) return
@@ -43,18 +44,21 @@ class SoundManager(private val context: Context) {
         scope.launch {
             try {
                 val sampleRate = 22050
-                val numSamples = (sampleRate * (durationMs / 1000.0)).toInt()
+                val numSamples = (sampleRate * (durationMs / 1000.0)).toInt().coerceAtLeast(100)
                 val samples = ShortArray(numSamples)
+
+                val attackSamples = (numSamples * 0.15).toInt().coerceAtLeast(10)
+                val releaseSamples = (numSamples * 0.35).toInt().coerceAtLeast(10)
 
                 for (i in 0 until numSamples) {
                     val time = i.toDouble() / sampleRate
-                    // Sine wave with soft attack and decay envelope
+                    // Smooth Hann / raised cosine envelope to prevent clicking
                     val envelope = when {
-                        i < numSamples * 0.1 -> i / (numSamples * 0.1)
-                        i > numSamples * 0.8 -> (numSamples - i) / (numSamples * 0.2)
+                        i < attackSamples -> 0.5 * (1.0 - Math.cos(Math.PI * i / attackSamples))
+                        i >= numSamples - releaseSamples -> 0.5 * (1.0 + Math.cos(Math.PI * (i - (numSamples - releaseSamples)) / releaseSamples))
                         else -> 1.0
                     }
-                    val sampleValue = (sin(2.0 * Math.PI * frequencyHz * time) * 32767.0 * volumeMultiplier * envelope).toInt()
+                    val sampleValue = (sin(2.0 * Math.PI * frequencyHz * time) * 28000.0 * volumeMultiplier * envelope).toInt()
                     samples[i] = sampleValue.coerceIn(-32768, 32767).toShort()
                 }
 
@@ -79,39 +83,44 @@ class SoundManager(private val context: Context) {
 
                 audioTrack.write(samples, 0, samples.size)
                 audioTrack.play()
-                delay(durationMs + 50L)
-                audioTrack.release()
+                delay(durationMs + 40L)
+                try {
+                    audioTrack.stop()
+                    audioTrack.release()
+                } catch (_: Exception) {}
             } catch (_: Exception) {
-                // Safe fallback on low memory or audio track allocation error
+                // Fallback on low memory
             }
         }
     }
 
     fun playClick() {
-        playTone(frequencyHz = 880.0, durationMs = 60, volumeMultiplier = 0.4f)
+        playTone(frequencyHz = 750.0, durationMs = 45, volumeMultiplier = 0.35f)
     }
 
     fun playNumberPlaced() {
-        playTone(frequencyHz = 659.25, durationMs = 70, volumeMultiplier = 0.5f)
+        playTone(frequencyHz = 620.0, durationMs = 55, volumeMultiplier = 0.45f)
     }
 
     fun playCrossSound() {
-        // Crisp pen scratch / strike sound effect
+        // Crisp pen strike sound
         scope.launch {
-            playTone(frequencyHz = 440.0, durationMs = 50, volumeMultiplier = 0.6f)
-            delay(30)
-            playTone(frequencyHz = 880.0, durationMs = 70, volumeMultiplier = 0.7f)
+            playTone(frequencyHz = 480.0, durationMs = 45, volumeMultiplier = 0.5f)
+            delay(35)
+            playTone(frequencyHz = 820.0, durationMs = 60, volumeMultiplier = 0.6f)
         }
     }
 
     fun playLineComplete() {
-        // Bright bell chord when a line is struck
+        // Bright celebration chord when a line is struck
         scope.launch {
-            playTone(frequencyHz = 523.25, durationMs = 90, volumeMultiplier = 0.7f) // C5
-            delay(60)
-            playTone(frequencyHz = 783.99, durationMs = 90, volumeMultiplier = 0.8f) // G5
-            delay(60)
-            playTone(frequencyHz = 1046.50, durationMs = 150, volumeMultiplier = 0.9f) // C6
+            playTone(frequencyHz = 523.25, durationMs = 80, volumeMultiplier = 0.6f) // C5
+            delay(70)
+            playTone(frequencyHz = 659.25, durationMs = 80, volumeMultiplier = 0.65f) // E5
+            delay(70)
+            playTone(frequencyHz = 783.99, durationMs = 80, volumeMultiplier = 0.7f) // G5
+            delay(70)
+            playTone(frequencyHz = 1046.50, durationMs = 140, volumeMultiplier = 0.8f) // C6
         }
     }
 
@@ -120,11 +129,11 @@ class SoundManager(private val context: Context) {
     }
 
     fun playBallCall() {
-        playTone(frequencyHz = 783.99, durationMs = 120, volumeMultiplier = 0.5f) // G5
+        playTone(frequencyHz = 783.99, durationMs = 100, volumeMultiplier = 0.45f) // G5
     }
 
     fun playSpinWheelTick() {
-        playTone(frequencyHz = 1046.50, durationMs = 30, volumeMultiplier = 0.3f) // C6
+        playTone(frequencyHz = 1046.50, durationMs = 25, volumeMultiplier = 0.25f) // C6
     }
 
     fun playWinFanfare() {
@@ -132,8 +141,8 @@ class SoundManager(private val context: Context) {
         scope.launch {
             val notes = listOf(523.25, 659.25, 783.99, 1046.50, 1318.51) // C5, E5, G5, C6, E6
             notes.forEach { note ->
-                playTone(frequencyHz = note, durationMs = 150, volumeMultiplier = 0.8f)
-                delay(120)
+                playTone(frequencyHz = note, durationMs = 120, volumeMultiplier = 0.75f)
+                delay(110)
             }
         }
     }
@@ -144,26 +153,16 @@ class SoundManager(private val context: Context) {
             val arpeggio = listOf(440.0, 554.37, 659.25, 880.0, 1108.73, 1318.51)
             repeat(2) {
                 arpeggio.forEach { freq ->
-                    playTone(frequencyHz = freq, durationMs = 90, volumeMultiplier = 0.8f)
-                    delay(70)
+                    playTone(frequencyHz = freq, durationMs = 80, volumeMultiplier = 0.75f)
+                    delay(65)
                 }
             }
         }
     }
 
     fun startAmbientGameMusic() {
+        // Kept silent during regular play so tones do not interrupt or annoy the user during thinking/tapping.
         stopAmbientMusic()
-        if (!isMusicEnabled) return
-
-        musicJob = scope.launch {
-            val scale = listOf(261.63, 329.63, 392.00, 493.88) // Soft C major 7th chord tones
-            var idx = 0
-            while (isMusicEnabled) {
-                playTone(frequencyHz = scale[idx % scale.size], durationMs = 300, volumeMultiplier = 0.15f)
-                idx++
-                delay(1200)
-            }
-        }
     }
 
     fun stopAmbientMusic() {

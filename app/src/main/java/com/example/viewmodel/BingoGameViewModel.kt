@@ -120,7 +120,6 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
             isAutoDaubActive = _userStats.value.isAutoDaubEnabled
         )
 
-        soundManager.startAmbientGameMusic()
         startBallCallLoop()
     }
 
@@ -395,8 +394,12 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
                 viewingBoardPlayer = 1,
                 matchOutcome = MatchOutcome.IN_PROGRESS
             )
-            soundManager.startAmbientGameMusic()
         }
+    }
+
+    fun toggleSound() {
+        val currentSound = _userStats.value.isSoundEnabled
+        toggleSound(!currentSound)
     }
 
     fun cutNumber(number: Int) {

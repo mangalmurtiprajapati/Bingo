@@ -20,6 +20,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
@@ -59,6 +61,8 @@ import com.example.viewmodel.ClassicMatchState
 fun BoardSetupScreen(
     state: ClassicMatchState,
     theme: BingoTheme,
+    isSoundMuted: Boolean = false,
+    onToggleSound: () -> Unit = {},
     onAssignCell: (Int, Int) -> Unit,
     onAutoFill: () -> Unit,
     onClear: () -> Unit,
@@ -99,6 +103,15 @@ fun BoardSetupScreen(
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
+                            tint = Color.White
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onToggleSound) {
+                        Icon(
+                            imageVector = if (isSoundMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
+                            contentDescription = if (isSoundMuted) "Unmute Audio" else "Mute Audio",
                             tint = Color.White
                         )
                     }

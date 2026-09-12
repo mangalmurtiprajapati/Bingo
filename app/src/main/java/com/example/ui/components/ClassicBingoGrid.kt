@@ -39,6 +39,7 @@ fun ClassicBingoGrid(
     isSetupMode: Boolean,
     enabled: Boolean = true,
     lastCutNumber: Int? = null,
+    selectedLineIndices: Set<Pair<Int, Int>>? = null,
     onCellClick: (row: Int, col: Int, number: Int?) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -65,11 +66,13 @@ fun ClassicBingoGrid(
                     for (c in 0 until 5) {
                         val number = board.cells.getOrNull(r)?.getOrNull(c)
                         val isCrossed = number != null && board.isNumberCrossed(number)
-                        val isInCompletedLine = isCrossed && board.isCellInCompletedLine(r, c)
+                        val isInSelectedLine = selectedLineIndices?.contains(Pair(r, c)) == true
+                        val isInCompletedLine = isCrossed && (isInSelectedLine || (selectedLineIndices == null && board.isCellInCompletedLine(r, c)))
                         val isLastCut = number != null && number == lastCutNumber
 
                         val cellBg by animateColorAsState(
                             targetValue = when {
+                                isInSelectedLine -> Color(0xFF00E676)
                                 isInCompletedLine -> Color(0xFFFFD700)
                                 isLastCut -> Color(0xFFFF4081)
                                 isCrossed -> theme.cellMarkedBg.copy(alpha = 0.5f)
@@ -81,6 +84,7 @@ fun ClassicBingoGrid(
 
                         val cellTextColor by animateColorAsState(
                             targetValue = when {
+                                isInSelectedLine -> Color(0xFF003300)
                                 isInCompletedLine -> Color(0xFF10002B)
                                 isCrossed -> Color.White.copy(alpha = 0.7f)
                                 number != null -> theme.textPrimary
