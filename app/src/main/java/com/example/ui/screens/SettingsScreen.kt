@@ -39,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ads.BingoBannerAd
@@ -125,7 +126,7 @@ fun SettingsScreen(
 
                 SettingActionItem(
                     title = "Rate & Share App",
-                    subtitle = "Love Lucky Bingo? Share with friends!",
+                    subtitle = "Love Kids Bingo? Share with friends and family!",
                     onClick = { }
                 )
 
@@ -169,7 +170,7 @@ fun SettingsScreen(
                         Text("Reset All Progress?", color = Color(0xFFFF5252), fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            "This will reset your coins, level, unlocked themes, and stats back to default. This action cannot be undone.",
+                            "This will reset your stars, level, unlocked themes, and stats back to default. This action cannot be undone.",
                             color = Color.White.copy(alpha = 0.8f),
                             fontSize = 12.sp
                         )
@@ -219,7 +220,7 @@ fun SettingsScreen(
                         Text("Privacy Policy", color = Color(0xFFFFD700), fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            "Lucky Bingo Offline is designed to run 100% locally on your device. We do not collect, transmit, or sell any personal information or gameplay telemetry to remote servers.",
+                            "Kids Bingo is a 100% family-friendly game designed for children. There is zero betting, gambling, or real-money wagering. The game runs safely and locally on your device with no data sharing.",
                             color = Color.White.copy(alpha = 0.9f),
                             fontSize = 12.sp
                         )
@@ -254,9 +255,22 @@ private fun SettingToggleItem(title: String, subtitle: String, isChecked: Boolea
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Text(text = subtitle, color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp)
+            Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                Text(
+                    text = title,
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = subtitle,
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 11.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
             Switch(
                 checked = isChecked,
@@ -277,8 +291,21 @@ private fun SettingActionItem(title: String, subtitle: String, onClick: () -> Un
             .clickable { onClick() }
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Text(text = subtitle, color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp)
+            Text(
+                text = title,
+                color = Color.White,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = subtitle,
+                color = Color.White.copy(alpha = 0.6f),
+                fontSize = 11.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

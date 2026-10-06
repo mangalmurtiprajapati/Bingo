@@ -250,7 +250,7 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun toggleMusic(enabled: Boolean) {
         soundManager.isMusicEnabled = enabled
-        if (!enabled) soundManager.stopAmbientMusic()
+        if (enabled) soundManager.startAmbientGameMusic() else soundManager.stopAmbientMusic()
         viewModelScope.launch {
             val current = repository.getCurrentStats()
             repository.saveUserStats(current.copy(isMusicEnabled = enabled))
@@ -271,7 +271,7 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun claimWheelReward(coins: Int) {
         viewModelScope.launch {
-            repository.addCoins(coins)
+            repository.recordDailySpin(coins)
         }
     }
 

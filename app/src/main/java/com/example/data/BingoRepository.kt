@@ -40,6 +40,16 @@ class BingoRepository(private val dao: BingoDao) {
         saveUserStats(current.copy(coins = (current.coins + amount).coerceAtLeast(0)))
     }
 
+    suspend fun recordDailySpin(amount: Int) {
+        val current = getCurrentStats()
+        saveUserStats(
+            current.copy(
+                coins = (current.coins + amount).coerceAtLeast(0),
+                lastDailyRewardTime = System.currentTimeMillis()
+            )
+        )
+    }
+
     suspend fun addXpAndCoins(xpAmount: Int, coinsAmount: Int) {
         val current = getCurrentStats()
         val updatedWithXp = current.addXp(xpAmount)

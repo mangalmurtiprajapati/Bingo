@@ -67,9 +67,9 @@ data class Achievement(
             ),
             Achievement(
                 id = "spin_wheel_3",
-                title = "Lucky Spinner",
-                description = "Spin the Lucky Wheel 3 times",
-                iconName = "wheel",
+                title = "Star Collector",
+                description = "Spin the Star Wheel 3 times",
+                iconName = "star",
                 targetCount = 3,
                 currentCount = 0,
                 rewardCoins = 200,

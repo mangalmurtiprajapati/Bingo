@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "Lucky Bingo Offline"
+rootProject.name = "Kids Bingo"
 
 include(":app")

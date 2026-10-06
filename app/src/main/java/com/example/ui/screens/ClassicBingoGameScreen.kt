@@ -225,7 +225,10 @@ fun ClassicBingoGameScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f, fill = false)
+                            ) {
                                 Icon(
                                     Icons.Default.SmartToy,
                                     contentDescription = null,
@@ -234,17 +237,19 @@ fun ClassicBingoGameScreen(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "$opponentTitle Progress:",
+                                    text = "$opponentTitle:",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = theme.textPrimary
+                                    color = theme.textPrimary,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                 )
                             }
 
                             // Opponent mini lines count badge
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "${opponentBoard.completedLinesCount} / 5 Lines",
+                                    text = "${opponentBoard.completedLinesCount}/5 Lines",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = if (opponentBoard.hasBingo) Color(0xFFFF1744) else theme.accentColor
@@ -295,7 +300,10 @@ fun ClassicBingoGameScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f, fill = false)
+                            ) {
                                 if (state.isComputerThinking) {
                                     CircularProgressIndicator(
                                         modifier = Modifier.size(16.dp),
@@ -307,7 +315,9 @@ fun ClassicBingoGameScreen(
                                         text = "🤖 Computer is picking a number...",
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color.White
+                                        color = Color.White,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                     )
                                 } else if (isUserTurn) {
                                     Icon(
@@ -318,10 +328,12 @@ fun ClassicBingoGameScreen(
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = if (isFriendMode) "Player ${state.viewingBoardPlayer}'s Turn: Tap a number to cut!" else "👉 Your Turn: Tap a number to cut!",
+                                        text = if (isFriendMode) "P${state.viewingBoardPlayer}'s Turn: Tap to cut!" else "👉 Your Turn: Tap a number to cut!",
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Black,
-                                        color = Color(0xFF00E676)
+                                        color = Color(0xFF00E676),
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                     )
                                 } else {
                                     Icon(
@@ -332,20 +344,24 @@ fun ClassicBingoGameScreen(
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = "Waiting for Opponent's Turn...",
+                                        text = "Waiting for Opponent...",
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color(0xFFFF9100)
+                                        color = Color(0xFFFF9100),
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                     )
                                 }
                             }
 
                             if (state.lastCutNumber != null) {
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "Last: #${state.lastCutNumber} (${state.lastCutBy})",
+                                    text = "#${state.lastCutNumber} (${state.lastCutBy})",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = theme.textPrimary
+                                    color = theme.textPrimary,
+                                    maxLines = 1
                                 )
                             }
                         }
@@ -431,7 +447,8 @@ fun ClassicBingoGameScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(24.dp),
+                        .verticalScroll(rememberScrollState())
+                        .padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
@@ -458,7 +475,7 @@ fun ClassicBingoGameScreen(
                                 textAlign = TextAlign.Center
                             )
                             Text(
-                                text = "+${state.coinsEarned} Coins  •  +${state.xpEarned} XP Earned!",
+                                text = "+${state.coinsEarned} Stars ⭐  •  +${state.xpEarned} XP Earned!",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF00E676)
@@ -479,7 +496,7 @@ fun ClassicBingoGameScreen(
                                 textAlign = TextAlign.Center
                             )
                             Text(
-                                text = if (isFriendMode) "Player 2 completed 5 lines first!" else "Computer completed 5 lines first. Better luck next time!",
+                                text = if (isFriendMode) "Player 2 completed 5 lines first!" else "Computer got 5 lines! Great game, play again!",
                                 fontSize = 14.sp,
                                 color = Color.White.copy(alpha = 0.85f),
                                 textAlign = TextAlign.Center

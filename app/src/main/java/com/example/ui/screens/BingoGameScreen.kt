@@ -258,7 +258,7 @@ fun BingoGameScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(
-                                    text = "+${state.coinsEarnedInGame} COINS 🪙",
+                                    text = "+${state.coinsEarnedInGame} STARS ⭐",
                                     color = Color(0xFFFFD700),
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.ExtraBold

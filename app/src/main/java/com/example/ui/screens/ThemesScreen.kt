@@ -35,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ads.BingoBannerAd
@@ -82,18 +83,21 @@ fun ThemesScreen(
                 Text(
                     text = "BINGO THEMES",
                     color = Color(0xFFFFD700),
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Black
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Black,
+                    maxLines = 1
                 )
 
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2A004E)),
-                    shape = RoundedCornerShape(16.dp)
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E0038)),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.border(1.dp, Color(0xFFFFD700), RoundedCornerShape(16.dp))
                 ) {
                     Text(
-                        text = "🪙 ${stats.coins}",
+                        text = "⭐ ${stats.coins}",
                         color = Color(0xFFFFD700),
                         fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                     )
                 }
@@ -126,14 +130,14 @@ fun ThemesScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(14.dp),
+                                .padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             // Theme Color Palette Swatch
                             Box(
                                 modifier = Modifier
-                                    .size(48.dp)
+                                    .size(46.dp)
                                     .clip(CircleShape)
                                     .background(Brush.linearGradient(themeItem.backgroundGradients)),
                                 contentAlignment = Alignment.Center
@@ -143,7 +147,7 @@ fun ThemesScreen(
                                         .size(20.dp)
                                         .clip(CircleShape)
                                         .background(themeItem.primaryColor)
-                                )
+                                    )
                             }
 
                             Spacer(modifier = Modifier.width(12.dp))
@@ -152,13 +156,17 @@ fun ThemesScreen(
                                 Text(
                                     text = themeItem.name,
                                     color = Color.White,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                                 Text(
                                     text = themeItem.description,
-                                    color = Color.White.copy(alpha = 0.6f),
-                                    fontSize = 11.sp
+                                    color = Color.White.copy(alpha = 0.7f),
+                                    fontSize = 11.sp,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
 
@@ -179,7 +187,7 @@ fun ThemesScreen(
                                         colors = ButtonDefaults.buttonColors(containerColor = themeItem.primaryColor),
                                         shape = RoundedCornerShape(12.dp)
                                     ) {
-                                        Text("APPLY", color = Color.White, fontWeight = FontWeight.Bold)
+                                        Text("APPLY", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                     }
                                 }
                                 else -> {
@@ -193,13 +201,14 @@ fun ThemesScreen(
                                             imageVector = Icons.Default.Lock,
                                             contentDescription = "Unlock",
                                             tint = Color(0xFF10002B),
-                                            modifier = Modifier.size(16.dp)
+                                            modifier = Modifier.size(14.dp)
                                         )
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Text(
-                                            text = "${themeItem.unlockCostCoins} 🪙",
+                                            text = "${themeItem.unlockCostCoins} ⭐",
                                             color = Color(0xFF10002B),
-                                            fontWeight = FontWeight.Bold
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.sp
                                         )
                                     }
                                 }

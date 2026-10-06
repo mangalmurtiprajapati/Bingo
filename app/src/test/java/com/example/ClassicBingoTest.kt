@@ -68,4 +68,13 @@ class ClassicBingoTest {
         assertTrue(board.hasBingo)
         assertEquals(12, completedLines.size) // 5 rows + 5 cols + 2 diags
     }
+
+    @Test
+    fun testDailySpinLimitation() {
+        val statsNeverSpun = com.example.model.UserStats(lastDailyRewardTime = 0L)
+        assertTrue(statsNeverSpun.canSpinWheelToday())
+
+        val statsSpunNow = com.example.model.UserStats(lastDailyRewardTime = System.currentTimeMillis())
+        org.junit.Assert.assertFalse(statsSpunNow.canSpinWheelToday())
+    }
 }

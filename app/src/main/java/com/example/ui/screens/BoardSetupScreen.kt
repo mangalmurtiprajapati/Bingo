@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.BingoTheme
@@ -150,7 +151,10 @@ fun BoardSetupScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f, fill = false)
+                            ) {
                                 Icon(
                                     Icons.Default.TouchApp,
                                     contentDescription = null,
@@ -160,13 +164,15 @@ fun BoardSetupScreen(
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = if (!isBoardComplete) {
-                                        "Next Number: #${currentBoard.nextNumberToPlace}"
+                                        "Next: #${currentBoard.nextNumberToPlace}"
                                     } else {
                                         "Ready to Play!"
                                     },
                                     fontWeight = FontWeight.ExtraBold,
                                     fontSize = 15.sp,
-                                    color = if (isBoardComplete) Color(0xFF00E676) else theme.accentColor
+                                    color = if (isBoardComplete) Color(0xFF00E676) else theme.accentColor,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
 

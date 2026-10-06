@@ -1,6 +1,6 @@
 {
-  "name": "Lucky Bingo Offline",
-  "description": "Authentic 1-25 classic 5x5 Bingo game with Computer AI, Play with Friends (Pass & Play), Online mode, 5-line B-I-N-G-O strike animations, themes, and audio.",
+  "name": "Kids Bingo",
+  "description": "Fun & friendly 1-25 classic 5x5 Bingo game for kids with Computer AI, Play with Friends (Pass & Play), Online mode, 5-line B-I-N-G-O strike animations, cute themes, and joyful music.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

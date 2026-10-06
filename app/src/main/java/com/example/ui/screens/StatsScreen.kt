@@ -30,6 +30,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ads.BingoBannerAd
@@ -117,7 +118,7 @@ fun StatsScreen(
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                     StatBox(title = "Numbers Daubed", value = "${stats.totalDaubs}", accentColor = Color(0xFFFF4081), modifier = Modifier.weight(1f))
-                    StatBox(title = "Current Coins", value = "${stats.coins} 🪙", accentColor = Color(0xFFFFD700), modifier = Modifier.weight(1f))
+                    StatBox(title = "Total Stars", value = "${stats.coins} ⭐", accentColor = Color(0xFFFFD700), modifier = Modifier.weight(1f))
                 }
             }
         }
@@ -134,9 +135,22 @@ private fun StatBox(title: String, value: String, accentColor: Color, modifier: 
         modifier = modifier.border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = title, color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
+            Text(
+                text = title,
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = 12.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = value, color = accentColor, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(
+                text = value,
+                color = accentColor,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

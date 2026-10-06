@@ -3,6 +3,6 @@
     <item
         android:width="66dp"
         android:height="66dp"
-        android:drawable="@drawable/ic_bingo_icon"
+        android:drawable="@drawable/kids_bingo_icon"
         android:gravity="center" />
 </layer-list>

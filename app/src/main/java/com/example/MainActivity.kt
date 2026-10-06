@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -45,7 +46,7 @@ class MainActivity : ComponentActivity() {
                         .statusBarsPadding()
                         .navigationBarsPadding()
                 ) {
-                    LuckyBingoApp()
+                    KidsBingoApp()
                 }
             }
         }
@@ -53,7 +54,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun LuckyBingoApp(
+fun KidsBingoApp(
     viewModel: BingoGameViewModel = viewModel()
 ) {
     val navController = rememberNavController()
@@ -63,6 +64,14 @@ fun LuckyBingoApp(
     val achievements by viewModel.repository.achievements.collectAsState(initial = emptyList())
 
     val activeTheme = BingoTheme.getTheme(stats.selectedThemeId)
+
+    LaunchedEffect(stats.isMusicEnabled) {
+        if (stats.isMusicEnabled) {
+            viewModel.soundManager.startAmbientGameMusic()
+        } else {
+            viewModel.soundManager.stopAmbientMusic()
+        }
+    }
 
     NavHost(
         navController = navController,

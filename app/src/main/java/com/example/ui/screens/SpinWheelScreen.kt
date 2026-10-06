@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,6 +30,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ads.BingoBannerAd
@@ -77,32 +80,46 @@ fun SpinWheelScreen(
                 }
 
                 Text(
-                    text = "LUCKY SPIN WHEEL",
-                    color = Color(0xFFFFD700),
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Black
+                    text = "DAILY SURPRISE WHEEL 🎁",
+                    color = Color(0xFF0D47A1),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Black,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .padding(horizontal = 8.dp)
+                        .weight(1f, fill = false)
                 )
 
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2A004E)),
-                    shape = RoundedCornerShape(16.dp)
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+                    modifier = Modifier.border(1.5.dp, Color(0xFFFFB300), RoundedCornerShape(16.dp))
                 ) {
-                    Text(
-                        text = "🪙 ${stats.coins}",
-                        color = Color(0xFFFFD700),
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "⭐ ${stats.coins}",
+                            color = Color(0xFFE65100),
+                            fontWeight = FontWeight.Black,
+                            fontSize = 14.sp
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Wheel Component
             SpinWheelComposable(
+                canSpin = stats.canSpinWheelToday(),
+                remainingTimeMs = stats.getRemainingTimeUntilNextSpinMs(),
                 soundManager = soundManager,
                 onRewardEarned = { segment ->
-                    onRewardEarned(segment.coinReward)
+                    onRewardEarned(segment.starReward)
                 }
             )
         }

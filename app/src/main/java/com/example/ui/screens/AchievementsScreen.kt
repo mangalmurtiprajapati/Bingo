@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ads.BingoBannerAd
@@ -83,18 +84,21 @@ fun AchievementsScreen(
                 Text(
                     text = "ACHIEVEMENTS",
                     color = Color(0xFFFFD700),
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Black
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Black,
+                    maxLines = 1
                 )
 
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2A004E)),
-                    shape = RoundedCornerShape(16.dp)
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E0038)),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.border(1.dp, Color(0xFFFFD700), RoundedCornerShape(16.dp))
                 ) {
                     Text(
-                        text = "🪙 ${stats.coins}",
+                        text = "⭐ ${stats.coins}",
                         color = Color(0xFFFFD700),
                         fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                     )
                 }
@@ -116,34 +120,43 @@ fun AchievementsScreen(
                             .fillMaxWidth()
                             .border(1.dp, Color(0xFFFFD700).copy(alpha = 0.4f), RoundedCornerShape(16.dp))
                     ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
+                        Column(modifier = Modifier.padding(12.dp)) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
                                     Icon(
                                         imageVector = Icons.Default.EmojiEvents,
                                         contentDescription = "Icon",
                                         tint = if (item.isCompleted) Color(0xFFFFD700) else Color.Gray,
-                                        modifier = Modifier.size(28.dp)
+                                        modifier = Modifier.size(26.dp)
                                     )
                                     Spacer(modifier = Modifier.width(10.dp))
-                                    Column {
+                                    Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = item.title,
                                             color = Color.White,
-                                            fontSize = 16.sp,
-                                            fontWeight = FontWeight.Bold
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                         Text(
                                             text = item.description,
-                                            color = Color.White.copy(alpha = 0.6f),
-                                            fontSize = 11.sp
+                                            color = Color.White.copy(alpha = 0.65f),
+                                            fontSize = 11.sp,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                     }
                                 }
+
+                                Spacer(modifier = Modifier.width(8.dp))
 
                                 if (item.isCompleted && !item.isClaimed) {
                                     Button(
@@ -151,10 +164,10 @@ fun AchievementsScreen(
                                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD700)),
                                         shape = RoundedCornerShape(12.dp)
                                     ) {
-                                        Text("CLAIM!", color = Color(0xFF10002B), fontWeight = FontWeight.Black)
+                                        Text("CLAIM!", color = Color(0xFF10002B), fontWeight = FontWeight.Black, fontSize = 12.sp)
                                     }
                                 } else if (item.isClaimed) {
-                                    Text("CLAIMED", color = Color(0xFF76FF03), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    Text("CLAIMED", color = Color(0xFF76FF03), fontWeight = FontWeight.Bold, fontSize = 11.sp)
                                 }
                             }
 
