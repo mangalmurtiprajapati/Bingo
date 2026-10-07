@@ -80,15 +80,12 @@ fun SpinWheelScreen(
                 }
 
                 Text(
-                    text = "DAILY SURPRISE WHEEL 🎁",
+                    text = "DAILY STARS 🎁",
                     color = Color(0xFF0D47A1),
-                    fontSize = 18.sp,
+                    fontSize = 17.sp,
                     fontWeight = FontWeight.Black,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier
-                        .padding(horizontal = 8.dp)
-                        .weight(1f, fill = false)
+                    modifier = Modifier.padding(horizontal = 8.dp)
                 )
 
                 Card(

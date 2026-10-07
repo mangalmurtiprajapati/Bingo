@@ -8,6 +8,7 @@ import com.example.data.BingoRepository
 import com.example.model.BingoCard
 import com.example.model.BingoTheme
 import com.example.model.ClassicBingoBoard
+import com.example.model.FriendProfile
 import com.example.model.GameDifficulty
 import com.example.model.GameMode
 import com.example.model.MatchOutcome
@@ -50,7 +51,16 @@ data class ClassicMatchState(
     // Online mode properties
     val roomCode: String = "742918",
     val isOnlineSearching: Boolean = false,
-    val onlineStatusMessage: String = "Ready to play"
+    val onlineSearchElapsedSec: Int = 0,
+    val onlineStatusMessage: String = "Ready to play",
+    val matchedOpponentName: String? = null,
+    val matchedOpponentLevel: Int = 1,
+    val challengeLevel: Int = 1,
+    val friendsList: List<FriendProfile> = listOf(
+        FriendProfile("Rohan_Star", 3, "Won 12 duels"),
+        FriendProfile("Priya_Mind", 2, "Won 8 duels"),
+        FriendProfile("Aarav_Ace", 4, "Won 19 duels")
+    )
 )
 
 data class BingoGameState(
@@ -297,13 +307,14 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun initClassicGame(mode: GameMode) {
         computerTurnJob?.cancel()
-        val computerBoard = if (mode == GameMode.VS_COMPUTER) {
+        val current = _classicState.value
+        val computerBoard = if (mode == GameMode.VS_COMPUTER || mode == GameMode.PLAY_ONLINE) {
             ClassicBingoBoard.generateRandomBoard()
         } else {
             ClassicBingoBoard()
         }
 
-        _classicState.value = ClassicMatchState(
+        _classicState.value = current.copy(
             gameMode = mode,
             isSetupComplete = false,
             currentSetupPlayer = 1,
@@ -381,7 +392,7 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
             )
         } else {
             // Start the actual match
-            val finalComputerBoard = if (current.gameMode == GameMode.VS_COMPUTER && !current.player2OrComputerBoard.isFull) {
+            val finalComputerBoard = if ((current.gameMode == GameMode.VS_COMPUTER || current.gameMode == GameMode.PLAY_ONLINE) && !current.player2OrComputerBoard.isFull) {
                 ClassicBingoBoard.generateRandomBoard()
             } else {
                 current.player2OrComputerBoard
@@ -394,6 +405,7 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
                 viewingBoardPlayer = 1,
                 matchOutcome = MatchOutcome.IN_PROGRESS
             )
+            soundManager.startAmbientGameMusic()
         }
     }
 
@@ -428,7 +440,11 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
         val cutByName = if (state.matchTurn == MatchTurn.PLAYER_1_TURN) {
             if (state.gameMode == GameMode.PLAY_WITH_FRIEND) "Player 1" else "You"
         } else {
-            if (state.gameMode == GameMode.PLAY_WITH_FRIEND) "Player 2" else "Computer"
+            when (state.gameMode) {
+                GameMode.PLAY_WITH_FRIEND -> "Player 2"
+                GameMode.PLAY_ONLINE -> state.matchedOpponentName ?: "Online Opponent"
+                else -> "Computer"
+            }
         }
 
         // Check winning conditions (5 completed lines)
@@ -443,10 +459,18 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
                 lastCutBy = cutByName,
                 cutHistory = updatedHistory,
                 matchOutcome = MatchOutcome.DRAW,
-                coinsEarned = 100,
-                xpEarned = 50
+                coinsEarned = 150,
+                xpEarned = 100
             )
             soundManager.stopAmbientMusic()
+            soundManager.playLineComplete()
+            viewModelScope.launch {
+                repository.recordGameFinished(
+                    isWin = false,
+                    daubsMade = updatedP1Board.crossedNumbers.size,
+                    coinsEarned = 150
+                )
+            }
             return
         }
 
@@ -567,24 +591,37 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
             val p1Won = updatedP1.hasBingo
             val p2Won = updatedP2.hasBingo
 
+            val opponentName = if (currentState.gameMode == GameMode.PLAY_ONLINE) {
+                currentState.matchedOpponentName ?: "Online Opponent"
+            } else {
+                "Computer"
+            }
+
             if (p1Won && p2Won) {
                 _classicState.value = currentState.copy(
                     player1Board = updatedP1,
                     player2OrComputerBoard = updatedP2,
                     lastCutNumber = bestPick,
-                    lastCutBy = "Computer",
+                    lastCutBy = opponentName,
                     cutHistory = updatedHistory,
                     isComputerThinking = false,
                     matchOutcome = MatchOutcome.DRAW,
-                    coinsEarned = 100
+                    coinsEarned = 150,
+                    xpEarned = 100
                 )
                 soundManager.stopAmbientMusic()
+                soundManager.playLineComplete()
+                repository.recordGameFinished(
+                    isWin = false,
+                    daubsMade = updatedP1.crossedNumbers.size,
+                    coinsEarned = 150
+                )
             } else if (p2Won) {
                 _classicState.value = currentState.copy(
                     player1Board = updatedP1,
                     player2OrComputerBoard = updatedP2,
                     lastCutNumber = bestPick,
-                    lastCutBy = "Computer",
+                    lastCutBy = opponentName,
                     cutHistory = updatedHistory,
                     isComputerThinking = false,
                     matchOutcome = MatchOutcome.COMPUTER_OR_PLAYER_2_WON
@@ -600,7 +637,7 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
                     player1Board = updatedP1,
                     player2OrComputerBoard = updatedP2,
                     lastCutNumber = bestPick,
-                    lastCutBy = "Computer",
+                    lastCutBy = opponentName,
                     cutHistory = updatedHistory,
                     isComputerThinking = false,
                     matchOutcome = MatchOutcome.PLAYER_WON,
@@ -619,7 +656,7 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
                     player1Board = updatedP1,
                     player2OrComputerBoard = updatedP2,
                     lastCutNumber = bestPick,
-                    lastCutBy = "Computer",
+                    lastCutBy = opponentName,
                     cutHistory = updatedHistory,
                     matchTurn = MatchTurn.PLAYER_1_TURN,
                     isComputerThinking = false
@@ -669,36 +706,133 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
         initClassicGame(current.gameMode)
     }
 
+    private var onlineSearchJob: Job? = null
+
     // Online Lobby simulations
-    fun generateNewOnlineRoom() {
+    fun generateNewOnlineRoom(): String {
         val code = (100000..999999).random().toString()
         _classicState.value = _classicState.value.copy(
             roomCode = code,
             isOnlineSearching = false,
-            onlineStatusMessage = "Room #$code Created! Share code with your friend."
+            onlineStatusMessage = "Room #$code Created! Share code via WhatsApp."
         )
+        return code
     }
 
-    fun joinOnlineRoom(code: String) {
+    fun joinOnlineRoom(code: String, onJoined: () -> Unit = {}) {
+        val opponentNames = listOf("Kavya_Star", "Alex_Mind", "Leo_Thinker", "Zoya_Gamer", "Kabir_Ace", "Aarav_Pro")
+        val opponent = opponentNames.random()
+        val opponentLevel = _classicState.value.challengeLevel.coerceIn(1, 5)
         _classicState.value = _classicState.value.copy(
             roomCode = code,
             isOnlineSearching = false,
-            onlineStatusMessage = "Joined Room #$code! Opponent connected."
+            matchedOpponentName = opponent,
+            matchedOpponentLevel = opponentLevel,
+            onlineStatusMessage = "Joined Room #$code! $opponent is ready.",
+            gameMode = GameMode.PLAY_ONLINE
+        )
+        initClassicGame(GameMode.PLAY_ONLINE)
+        onJoined()
+    }
+
+    fun startQuickOnlineMatch(onMatched: () -> Unit = {}) {
+        onlineSearchJob?.cancel()
+        _classicState.value = _classicState.value.copy(
+            isOnlineSearching = true,
+            onlineSearchElapsedSec = 0,
+            onlineStatusMessage = "Searching for active players online... 🔍"
+        )
+        onlineSearchJob = viewModelScope.launch {
+            val randomNames = listOf("Alex_Mind", "Kavya_Star", "Leo_Thinker", "Zoya_Gamer", "Kabir_Ace", "Aarav_Pro", "Diya_Speed", "Rohan_Ace")
+            val chosenName = randomNames.random()
+            val chosenLevel = (1..5).random()
+
+            // 6-8 seconds matchmaking search matching user prompt: "5 se 10 second ke under"
+            val totalSec = 7
+            for (sec in 1..totalSec) {
+                delay(1000)
+                val status = when (sec) {
+                    in 1..2 -> "Scanning online players... (${totalSec - sec}s)"
+                    in 3..4 -> "Found active player! Connecting peer link... ⚡"
+                    in 5..6 -> "Matched with $chosenName (Lvl $chosenLevel)! Connecting..."
+                    else -> "Match Ready! Fill up your board to start!"
+                }
+                _classicState.value = _classicState.value.copy(
+                    onlineSearchElapsedSec = sec,
+                    onlineStatusMessage = status
+                )
+            }
+
+            // Successfully matched!
+            _classicState.value = _classicState.value.copy(
+                isOnlineSearching = false,
+                matchedOpponentName = chosenName,
+                matchedOpponentLevel = chosenLevel,
+                onlineStatusMessage = "Matched with $chosenName! Fill up your board to start!",
+                gameMode = GameMode.PLAY_ONLINE
+            )
+            initClassicGame(GameMode.PLAY_ONLINE)
+            onMatched()
+        }
+    }
+
+    fun cancelOnlineSearch() {
+        onlineSearchJob?.cancel()
+        onlineSearchJob = null
+        _classicState.value = _classicState.value.copy(
+            isOnlineSearching = false,
+            onlineStatusMessage = "Search cancelled."
         )
     }
 
-    fun startQuickOnlineMatch() {
-        _classicState.value = _classicState.value.copy(
-            isOnlineSearching = true,
-            onlineStatusMessage = "Finding online player..."
-        )
-        viewModelScope.launch {
-            delay(1500)
+    fun setChallengeLevel(level: Int) {
+        _classicState.value = _classicState.value.copy(challengeLevel = level.coerceIn(1, 5))
+    }
+
+    fun addFriend(name: String, level: Int = 1) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return
+        val currentList = _classicState.value.friendsList
+        if (currentList.none { it.name.equals(trimmed, ignoreCase = true) }) {
+            val newFriend = FriendProfile(
+                name = trimmed,
+                level = level.coerceIn(1, 5),
+                statsDesc = "Lvl $level Mind Challenger"
+            )
             _classicState.value = _classicState.value.copy(
-                isOnlineSearching = false,
-                onlineStatusMessage = "Opponent found! Setting up board..."
+                friendsList = currentList + newFriend
             )
         }
+    }
+
+    fun updateFriendLevel(name: String, newLevel: Int) {
+        val currentList = _classicState.value.friendsList
+        val updated = currentList.map {
+            if (it.name.equals(name, ignoreCase = true)) {
+                it.copy(level = newLevel.coerceIn(1, 5), statsDesc = "Lvl $newLevel Mind Challenger")
+            } else it
+        }
+        _classicState.value = _classicState.value.copy(friendsList = updated)
+    }
+
+    fun removeFriend(name: String) {
+        val currentList = _classicState.value.friendsList
+        _classicState.value = _classicState.value.copy(
+            friendsList = currentList.filterNot { it.name.equals(name, ignoreCase = true) }
+        )
+    }
+
+    fun prepareFriendChallenge(friend: FriendProfile): String {
+        val code = generateNewOnlineRoom()
+        _classicState.value = _classicState.value.copy(
+            matchedOpponentName = friend.name,
+            matchedOpponentLevel = friend.level,
+            challengeLevel = friend.level,
+            onlineStatusMessage = "Challenging ${friend.name} (Lvl ${friend.level}) in Room #$code!",
+            gameMode = GameMode.PLAY_ONLINE
+        )
+        initClassicGame(GameMode.PLAY_ONLINE)
+        return code
     }
 
     // ============================================================================

@@ -144,3 +144,10 @@ data class ClassicBingoBoard(
         return cells.any { row -> row.contains(number) }
     }
 }
+
+data class FriendProfile(
+    val name: String,
+    val level: Int,
+    val statsDesc: String
+)
+

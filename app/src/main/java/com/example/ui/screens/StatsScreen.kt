@@ -139,8 +139,8 @@ private fun StatBox(title: String, value: String, accentColor: Color, modifier: 
                 text = title,
                 color = Color.White.copy(alpha = 0.7f),
                 fontSize = 12.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                maxLines = 2,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(

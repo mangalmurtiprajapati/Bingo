@@ -296,13 +296,13 @@ fun ClassicBingoGameScreen(
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(turnBannerBg)
-                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                                .padding(horizontal = 10.dp, vertical = 7.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f, fill = false)
+                                modifier = Modifier.weight(1f)
                             ) {
                                 if (state.isComputerThinking) {
                                     CircularProgressIndicator(
@@ -312,12 +312,10 @@ fun ClassicBingoGameScreen(
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = "🤖 Computer is picking a number...",
+                                        text = "🤖 Computer is picking...",
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color.White,
-                                        maxLines = 1,
-                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                        color = Color.White
                                     )
                                 } else if (isUserTurn) {
                                     Icon(
@@ -328,12 +326,10 @@ fun ClassicBingoGameScreen(
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = if (isFriendMode) "P${state.viewingBoardPlayer}'s Turn: Tap to cut!" else "👉 Your Turn: Tap a number to cut!",
+                                        text = if (isFriendMode) "P${state.viewingBoardPlayer}'s Turn — Tap any box!" else "Your Turn — Tap any box to cut!",
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Black,
-                                        color = Color(0xFF00E676),
-                                        maxLines = 1,
-                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                        color = Color(0xFF00E676)
                                     )
                                 } else {
                                     Icon(
@@ -347,22 +343,26 @@ fun ClassicBingoGameScreen(
                                         text = "Waiting for Opponent...",
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color(0xFFFF9100),
-                                        maxLines = 1,
-                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                        color = Color(0xFFFF9100)
                                     )
                                 }
                             }
 
                             if (state.lastCutNumber != null) {
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "#${state.lastCutNumber} (${state.lastCutBy})",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = theme.textPrimary,
-                                    maxLines = 1
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(Color.Black.copy(alpha = 0.35f))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "Last: #${state.lastCutNumber}",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFFFFD700)
+                                    )
+                                }
                             }
                         }
                     }

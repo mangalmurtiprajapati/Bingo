@@ -189,8 +189,8 @@ fun HomeScreen(
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     Image(
-                        painter = painterResource(id = R.drawable.img_bingo_banner),
-                        contentDescription = "Kids Bingo Banner",
+                        painter = painterResource(id = R.drawable.mind_bingo_banner),
+                        contentDescription = "1-25 Bingo Mind Game Banner",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -200,7 +200,7 @@ fun HomeScreen(
                             .fillMaxSize()
                             .background(
                                 Brush.verticalGradient(
-                                    listOf(Color.Transparent, Color(0xFF0D47A1).copy(alpha = 0.65f))
+                                    listOf(Color.Transparent, Color(0xFF0D47A1).copy(alpha = 0.75f))
                                 )
                             )
                     )
@@ -212,8 +212,8 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Image(
-                            painter = painterResource(id = R.drawable.kids_bingo_icon),
-                            contentDescription = "Kids Bingo Mascot",
+                            painter = painterResource(id = R.drawable.simple_bingo_logo),
+                            contentDescription = "Bingo Mind Game Logo",
                             modifier = Modifier
                                 .size(48.dp)
                                 .clip(CircleShape)
@@ -222,13 +222,13 @@ fun HomeScreen(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = "KIDS BINGO ⭐",
+                                text = "1-25 BINGO MIND GAME 🎯",
                                 color = Color.White,
-                                fontSize = 22.sp,
+                                fontSize = 20.sp,
                                 fontWeight = FontWeight.Black
                             )
                             Text(
-                                text = "Fun 1 to 25 Number Game for Kids!",
+                                text = "Classic 5x5 Number Strategy • Ages 5+",
                                 color = Color(0xFFFFF9C4),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
@@ -547,17 +547,17 @@ private fun HomeMenuCard(
                 Text(
                     text = title,
                     color = Color(0xFF1A237E),
-                    fontSize = 14.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Black,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    maxLines = 2,
+                    lineHeight = 16.sp
                 )
                 Text(
                     text = subtitle,
                     color = Color(0xFF546E7A),
                     fontSize = 11.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    maxLines = 2,
+                    lineHeight = 14.sp
                 )
             }
         }

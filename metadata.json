@@ -1,6 +1,6 @@
 {
   "name": "Kids Bingo",
-  "description": "Fun & friendly 1-25 classic 5x5 Bingo game for kids with Computer AI, Play with Friends (Pass & Play), Online mode, 5-line B-I-N-G-O strike animations, cute themes, and joyful music.",
+  "description": "Classic 1-25 Numbers Strategy & Mind Game for ages 5+ and family. Challenge Computer AI, Play with Friends (Pass & Play), or join Online Multiplayer with 5-line B-I-N-G-O strike animations, themes, and audio.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

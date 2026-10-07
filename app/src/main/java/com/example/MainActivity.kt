@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Surface
@@ -45,6 +46,7 @@ class MainActivity : ComponentActivity() {
                         .fillMaxSize()
                         .statusBarsPadding()
                         .navigationBarsPadding()
+                        .imePadding()
                 ) {
                     KidsBingoApp()
                 }
@@ -163,8 +165,23 @@ fun KidsBingoApp(
                 state = classicState,
                 theme = activeTheme,
                 onCreateRoom = { viewModel.generateNewOnlineRoom() },
-                onJoinRoom = { code -> viewModel.joinOnlineRoom(code) },
-                onQuickMatch = { viewModel.startQuickOnlineMatch() },
+                onJoinRoom = { code ->
+                    viewModel.joinOnlineRoom(code) {
+                        navController.navigate("classic_setup")
+                    }
+                },
+                onQuickMatch = {
+                    viewModel.startQuickOnlineMatch {
+                        navController.navigate("classic_setup")
+                    }
+                },
+                onCancelSearch = { viewModel.cancelOnlineSearch() },
+                onSetChallengeLevel = { level -> viewModel.setChallengeLevel(level) },
+                onAddFriend = { name, level -> viewModel.addFriend(name, level) },
+                onUpdateFriendLevel = { name, level -> viewModel.updateFriendLevel(name, level) },
+                onChallengeFriend = { friend ->
+                    viewModel.prepareFriendChallenge(friend)
+                },
                 onProceedToSetup = {
                     navController.navigate("classic_setup")
                 },

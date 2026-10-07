@@ -181,52 +181,51 @@ fun SpinWheelComposable(
 
                     // Draw Numbers and Labels inside each segment!
                     val midAngleDeg = startAngle + segmentAngle / 2f
-                    val midAngleRad = (midAngleDeg * PI / 180f).toFloat()
-
-                    val textRadius = radius * 0.65f
-                    val textX = center.x + textRadius * cos(midAngleRad)
-                    val textY = center.y + textRadius * sin(midAngleRad)
-
-                    val normAngle = (midAngleDeg % 360f + 360f) % 360f
-                    val rotDeg = if (normAngle > 0f && normAngle < 180f) midAngleDeg - 90f else midAngleDeg + 90f
 
                     drawContext.canvas.nativeCanvas.apply {
                         save()
-                        rotate(rotDeg, textX, textY)
+                        // 1. Rotate whole canvas to align slice with horizontal axis
+                        rotate(midAngleDeg, center.x, center.y)
 
-                        // Outline stroke for maximum readability on any color background
+                        val sliceX = center.x + radius * 0.63f
+                        val sliceY = center.y
+
+                        // 2. Rotate 90 degrees at slice center so text reads along the circular arc
+                        rotate(90f, sliceX, sliceY)
+
+                        // Outline stroke for number
                         val numberStroke = android.graphics.Paint().apply {
                             color = android.graphics.Color.parseColor("#44000000")
                             style = android.graphics.Paint.Style.STROKE
                             strokeWidth = 6f
-                            textSize = radius * 0.17f
+                            textSize = radius * 0.16f
                             isFakeBoldText = true
                             isAntiAlias = true
                             textAlign = android.graphics.Paint.Align.CENTER
                         }
-                        drawText(segment.amountText, textX, textY - 2f, numberStroke)
+                        drawText(segment.amountText, sliceX, sliceY - 2f, numberStroke)
 
                         // Solid White Number Fill
                         val numberFill = android.graphics.Paint().apply {
                             color = android.graphics.Color.WHITE
                             style = android.graphics.Paint.Style.FILL
-                            textSize = radius * 0.17f
+                            textSize = radius * 0.16f
                             isFakeBoldText = true
                             isAntiAlias = true
                             textAlign = android.graphics.Paint.Align.CENTER
                         }
-                        drawText(segment.amountText, textX, textY - 2f, numberFill)
+                        drawText(segment.amountText, sliceX, sliceY - 2f, numberFill)
 
                         // Subtitle Label (e.g. STARS, MEGA, SUPER)
                         val labelPaint = android.graphics.Paint().apply {
                             color = android.graphics.Color.parseColor("#FFFDE7")
-                            textSize = radius * 0.085f
+                            textSize = radius * 0.08f
                             isFakeBoldText = true
                             isAntiAlias = true
                             textAlign = android.graphics.Paint.Align.CENTER
                             setShadowLayer(4f, 0f, 1f, android.graphics.Color.parseColor("#88000000"))
                         }
-                        drawText(segment.subText, textX, textY + radius * 0.10f, labelPaint)
+                        drawText(segment.subText, sliceX, sliceY + radius * 0.09f, labelPaint)
 
                         restore()
                     }
