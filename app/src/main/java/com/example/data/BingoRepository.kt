@@ -122,6 +122,17 @@ class BingoRepository(private val dao: BingoDao) {
         dao.insertAchievements(defaultList)
     }
 
+    suspend fun updateUserProfile(name: String, provider: String, avatar: String) {
+        val current = getCurrentStats()
+        saveUserStats(
+            current.copy(
+                userName = name,
+                loginProvider = provider,
+                userAvatar = avatar
+            )
+        )
+    }
+
     suspend fun getCurrentStats(): UserStats {
         return dao.getUserStatsDirect()?.toDomain() ?: UserStats()
     }

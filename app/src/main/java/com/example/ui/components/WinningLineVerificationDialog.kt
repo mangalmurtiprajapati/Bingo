@@ -99,7 +99,7 @@ fun WinningLineVerificationDialog(
             contentAlignment = Alignment.Center
         ) {
             Card(
-                colors = CardDefaults.cardColors(containerColor = theme.cardBgColor),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF131127)),
                 shape = RoundedCornerShape(22.dp),
                 border = androidx.compose.foundation.BorderStroke(2.dp, Color(0xFFFFD700)),
                 modifier = Modifier

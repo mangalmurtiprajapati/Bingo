@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.model.BingoTheme
+import com.example.model.ChatReaction
 import com.example.model.GameMode
 import com.example.model.MatchOutcome
 import com.example.model.MatchTurn
@@ -83,6 +84,8 @@ fun ClassicBingoGameScreen(
     theme: BingoTheme,
     isSoundMuted: Boolean = false,
     onToggleSound: () -> Unit = {},
+    reactions: List<ChatReaction> = emptyList(),
+    onSendReaction: (String) -> Unit = {},
     onCutNumber: (Int) -> Unit,
     onRematch: () -> Unit,
     onSwitchBoard: (Int) -> Unit,
@@ -213,7 +216,8 @@ fun ClassicBingoGameScreen(
                 // 2. Opponent Status Indicator & Turn Indicator
                 Card(
                     shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = theme.cardBgColor.copy(alpha = 0.9f)),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A).copy(alpha = 0.95f)),
+                    border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFFFFD700).copy(alpha = 0.45f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
@@ -232,15 +236,15 @@ fun ClassicBingoGameScreen(
                                 Icon(
                                     Icons.Default.SmartToy,
                                     contentDescription = null,
-                                    tint = theme.accentColor,
+                                    tint = Color(0xFFFFD700),
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = "$opponentTitle:",
                                     fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = theme.textPrimary,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.White,
                                     maxLines = 1,
                                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                 )
@@ -252,7 +256,7 @@ fun ClassicBingoGameScreen(
                                     text = "${opponentBoard.completedLinesCount}/5 Lines",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.ExtraBold,
-                                    color = if (opponentBoard.hasBingo) Color(0xFFFF1744) else theme.accentColor
+                                    color = if (opponentBoard.hasBingo) Color(0xFFFF1744) else Color(0xFFFFD700)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 // Mini strike letters for opponent
@@ -264,14 +268,14 @@ fun ClassicBingoGameScreen(
                                             modifier = Modifier
                                                 .size(18.dp)
                                                 .clip(RoundedCornerShape(4.dp))
-                                                .background(if (isCut) Color(0xFFFFD700) else theme.cellDefaultBg),
+                                                .background(if (isCut) Color(0xFFFFD700) else Color(0xFF334155)),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Text(
                                                 text = char.toString(),
                                                 fontSize = 10.sp,
                                                 fontWeight = FontWeight.Black,
-                                                color = if (isCut) Color(0xFF10002B) else Color.White.copy(alpha = 0.6f)
+                                                color = if (isCut) Color(0xFF10002B) else Color.White
                                             )
                                         }
                                     }
@@ -427,21 +431,231 @@ fun ClassicBingoGameScreen(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // 5. In-Match Live Emoji & Quick Chat Reaction Dock
+                var showQuickChatList by remember { mutableStateOf(false) }
+
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A).copy(alpha = 0.85f)),
+                    border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFFFFD700).copy(alpha = 0.4f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Header: Opponent online status & latency
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "${state.opponentAvatar} $opponentTitle",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.White
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF00E676))
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (state.gameMode == GameMode.PLAY_ONLINE) "Online • 28ms" else "Ready",
+                                    fontSize = 10.sp,
+                                    color = Color(0xFF00E676),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { showQuickChatList = !showQuickChatList }
+                                    .background(Color(0xFF1E293B))
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = if (showQuickChatList) "Hide Chat ▲" else "💬 Quick Chat ▼",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFFFD700)
+                                )
+                            }
+                        }
+
+                        // Live Reaction Feed (Shows recent reactions from user and friend)
+                        if (reactions.isNotEmpty()) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(Color.Black.copy(alpha = 0.35f))
+                                    .padding(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                reactions.takeLast(3).forEach { r ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = if (r.isUser) Arrangement.End else Arrangement.Start,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .background(
+                                                    if (r.isUser) Color(0xFF0288D1).copy(alpha = 0.85f)
+                                                    else Color(0xFFC2185B).copy(alpha = 0.85f)
+                                                )
+                                                .border(
+                                                    1.dp,
+                                                    if (r.isUser) Color(0xFF81D4FA) else Color(0xFFFF80AB),
+                                                    RoundedCornerShape(12.dp)
+                                                )
+                                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    text = if (r.isUser) "You: " else "${r.senderAvatar} ${r.senderName}: ",
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFFFFD700)
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text(
+                                                    text = r.content,
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.Black,
+                                                    color = Color.White
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Emoji Reaction Buttons Row
+                        val emojis = listOf("🔥", "😂", "👏", "🎯", "😱", "😎", "🥳", "🍀")
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            items(emojis) { emoji ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(Color(0xFF1E293B))
+                                        .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
+                                    .clickable {
+                                        onSendReaction(emoji)
+                                    },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(text = emoji, fontSize = 18.sp)
+                                }
+                            }
+                        }
+
+                        // Quick Chat Pills List (Toggled)
+                        AnimatedVisibility(visible = showQuickChatList) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                val quickChats = listOf(
+                                    "Good luck! 🍀",
+                                    "Nice cut! 👏",
+                                    "Almost got BINGO! 😱",
+                                    "Watch this! 😎",
+                                    "GG (Good Game) 🤝",
+                                    "Rematch? 🔥"
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    quickChats.take(3).forEach { phrase ->
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(Color(0xFF334155))
+                                                .clickable {
+                                                    onSendReaction(phrase)
+                                                    showQuickChatList = false
+                                                }
+                                                .padding(vertical = 6.dp, horizontal = 4.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = phrase,
+                                                fontSize = 10.sp,
+                                                color = Color.White,
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 1
+                                            )
+                                        }
+                                    }
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    quickChats.drop(3).forEach { phrase ->
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(Color(0xFF334155))
+                                                .clickable {
+                                                    onSendReaction(phrase)
+                                                    showQuickChatList = false
+                                                }
+                                                .padding(vertical = 6.dp, horizontal = 4.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = phrase,
+                                                fontSize = 10.sp,
+                                                color = Color.White,
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 1
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
 
-    // 5. Match Outcome Celebration Overlay
+    // 6. Match Outcome Celebration Overlay
     if (state.matchOutcome != MatchOutcome.IN_PROGRESS) {
         Dialog(onDismissRequest = { /* Require action button click */ }) {
             Card(
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = theme.cardBgColor),
-                elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1A173B)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 14.dp),
+                border = androidx.compose.foundation.BorderStroke(2.5.dp, Color(0xFFFFD700)),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(2.5.dp, Color(0xFFFFD700), RoundedCornerShape(24.dp))
                     .padding(4.dp)
             ) {
                 Column(
@@ -489,17 +703,23 @@ fun ClassicBingoGameScreen(
                                 modifier = Modifier.size(60.dp)
                             )
                             Text(
-                                text = if (isFriendMode) "Player 2 Won!" else "Computer Got BINGO!",
+                                text = if (isFriendMode) "Player 2 Won!" else "$opponentTitle Won!",
                                 fontSize = 22.sp,
                                 fontWeight = FontWeight.Black,
                                 color = Color(0xFFFF5252),
                                 textAlign = TextAlign.Center
                             )
                             Text(
-                                text = if (isFriendMode) "Player 2 completed 5 lines first!" else "Computer got 5 lines! Great game, play again!",
+                                text = if (isFriendMode) "Player 2 completed 5 lines first!" else "$opponentTitle got 5 lines! Great duel, play again!",
                                 fontSize = 14.sp,
-                                color = Color.White.copy(alpha = 0.85f),
+                                color = Color.White.copy(alpha = 0.9f),
                                 textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = "+${state.coinsEarned} Stars ⭐  •  +${state.xpEarned} XP (Consolation)",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFFFB300)
                             )
                         }
                         MatchOutcome.DRAW -> {
@@ -511,10 +731,16 @@ fun ClassicBingoGameScreen(
                                 textAlign = TextAlign.Center
                             )
                             Text(
-                                text = "Both boards completed 5 lines at the same time!",
+                                text = "Both boards completed 5 lines at the exact same time!",
                                 fontSize = 14.sp,
-                                color = Color.White.copy(alpha = 0.85f),
+                                color = Color.White.copy(alpha = 0.9f),
                                 textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = "+${state.coinsEarned} Stars ⭐  •  +${state.xpEarned} XP (Tie Bonus)",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF00E676)
                             )
                         }
                         else -> Unit
@@ -566,7 +792,8 @@ fun ClassicBingoGameScreen(
                             .fillMaxWidth()
                             .height(48.dp)
                             .testTag("home_from_game_button"),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFFD700)),
+                        border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFFFFD700).copy(alpha = 0.7f)),
                         shape = RoundedCornerShape(14.dp)
                     ) {
                         Text("Back to Main Menu", fontWeight = FontWeight.Bold, fontSize = 14.sp)

@@ -100,6 +100,10 @@ class SoundManager(private val context: Context) {
         playTone(frequencyHz = 750.0, durationMs = 45, volumeMultiplier = 0.35f)
     }
 
+    fun playReaction() {
+        playTone(frequencyHz = 880.0, durationMs = 60, volumeMultiplier = 0.40f)
+    }
+
     fun playNumberPlaced() {
         playTone(frequencyHz = 620.0, durationMs = 55, volumeMultiplier = 0.45f)
     }

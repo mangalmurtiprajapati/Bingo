@@ -148,6 +148,17 @@ data class ClassicBingoBoard(
 data class FriendProfile(
     val name: String,
     val level: Int,
-    val statsDesc: String
+    val statsDesc: String,
+    val isOnline: Boolean = true,
+    val avatarEmoji: String = "😎"
+)
+
+data class ChatReaction(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val senderName: String,
+    val senderAvatar: String,
+    val isUser: Boolean,
+    val content: String,
+    val timestamp: Long = System.currentTimeMillis()
 )
 

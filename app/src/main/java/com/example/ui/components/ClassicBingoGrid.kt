@@ -44,12 +44,12 @@ fun ClassicBingoGrid(
     modifier: Modifier = Modifier
 ) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = theme.cardBgColor),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
         shape = RoundedCornerShape(18.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
         modifier = modifier
             .fillMaxWidth()
-            .border(2.dp, theme.primaryColor.copy(alpha = 0.4f), RoundedCornerShape(18.dp))
+            .border(2.dp, Color(0xFFFFD700).copy(alpha = 0.5f), RoundedCornerShape(18.dp))
             .padding(2.dp)
     ) {
         Column(
@@ -75,9 +75,9 @@ fun ClassicBingoGrid(
                                 isInSelectedLine -> Color(0xFF00E676)
                                 isInCompletedLine -> Color(0xFFFFD700)
                                 isLastCut -> Color(0xFFFF4081)
-                                isCrossed -> theme.cellMarkedBg.copy(alpha = 0.5f)
-                                number != null -> theme.cellDefaultBg
-                                else -> theme.cellDefaultBg.copy(alpha = 0.35f)
+                                isCrossed -> Color(0xFFFFEBEE)
+                                number != null -> Color(0xFFFFFFFF)
+                                else -> Color(0xFFF1F5F9)
                             },
                             label = "cellBg_$r$c"
                         )
@@ -86,9 +86,9 @@ fun ClassicBingoGrid(
                             targetValue = when {
                                 isInSelectedLine -> Color(0xFF003300)
                                 isInCompletedLine -> Color(0xFF10002B)
-                                isCrossed -> Color.White.copy(alpha = 0.7f)
-                                number != null -> theme.textPrimary
-                                else -> theme.primaryColor.copy(alpha = 0.4f)
+                                isCrossed -> Color(0xFFB71C1C)
+                                number != null -> Color(0xFF0F172A)
+                                else -> Color(0xFF64748B)
                             },
                             label = "cellText_$r$c"
                         )
@@ -100,19 +100,19 @@ fun ClassicBingoGrid(
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(cellBg)
                                 .border(
-                                    width = if (isLastCut) 2.5.dp else if (isInCompletedLine) 2.dp else 1.dp,
+                                    width = if (isLastCut) 2.5.dp else if (isInCompletedLine) 2.5.dp else if (isCrossed) 1.8.dp else 1.5.dp,
                                     color = when {
-                                        isLastCut -> Color(0xFFFFD700)
-                                        isInCompletedLine -> Color.White
-                                        isCrossed -> Color(0xFFFF1744).copy(alpha = 0.8f)
-                                        number != null -> theme.primaryColor.copy(alpha = 0.6f)
-                                        else -> theme.primaryColor.copy(alpha = 0.25f)
+                                        isLastCut -> Color(0xFFFF4081)
+                                        isInCompletedLine -> Color(0xFFFFD700)
+                                        isCrossed -> Color(0xFFE53935)
+                                        number != null -> Color(0xFF0288D1)
+                                        else -> Color(0xFF94A3B8)
                                     },
                                     shape = RoundedCornerShape(10.dp)
                                 )
                                 .then(
-                                    if (isLastCut || isInCompletedLine) Modifier.shadow(4.dp, RoundedCornerShape(10.dp))
-                                    else Modifier
+                                    if (isLastCut || isInCompletedLine) Modifier.shadow(6.dp, RoundedCornerShape(10.dp))
+                                    else Modifier.shadow(2.dp, RoundedCornerShape(10.dp))
                                 )
                                 .clickable(enabled = enabled) {
                                     onCellClick(r, c, number)
@@ -123,9 +123,18 @@ fun ClassicBingoGrid(
                                 Text(
                                     text = number.toString(),
                                     color = cellTextColor,
-                                    fontSize = 18.sp,
-                                    fontWeight = if (isCrossed) FontWeight.Bold else FontWeight.Black
+                                    fontSize = 19.sp,
+                                    fontWeight = FontWeight.Black
                                 )
+                            } else if (isSetupMode) {
+                                // Clear slot placeholder in setup mode so box is never invisible
+                                Text(
+                                    text = "${r * 5 + c + 1}",
+                                    color = Color(0xFF94A3B8),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
 
                                 // Prominent Pen/Chalk Cross Mark (✕) across the box
                                 if (isCrossed) {
@@ -152,14 +161,6 @@ fun ClassicBingoGrid(
                                         )
                                     }
                                 }
-                            } else if (isSetupMode) {
-                                Text(
-                                    text = "+",
-                                    color = theme.primaryColor.copy(alpha = 0.4f),
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Light
-                                )
-                            }
                         }
                     }
                 }

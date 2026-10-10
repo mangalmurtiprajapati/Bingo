@@ -63,6 +63,7 @@ fun KidsBingoApp(
     val stats by viewModel.userStats.collectAsState()
     val gameState by viewModel.gameState.collectAsState()
     val classicState by viewModel.classicState.collectAsState()
+    val liveReactions by viewModel.liveReactions.collectAsState()
     val achievements by viewModel.repository.achievements.collectAsState(initial = emptyList())
 
     val activeTheme = BingoTheme.getTheme(stats.selectedThemeId)
@@ -84,6 +85,9 @@ fun KidsBingoApp(
                 stats = stats,
                 activeTheme = activeTheme,
                 onToggleSound = { viewModel.toggleSound() },
+                onUpdateProfile = { name, provider, avatar ->
+                    viewModel.updateUserProfile(name, provider, avatar)
+                },
                 onStartClassicGame = { mode ->
                     viewModel.initClassicGame(mode)
                     if (mode == GameMode.PLAY_ONLINE) {
@@ -139,6 +143,8 @@ fun KidsBingoApp(
                 theme = activeTheme,
                 isSoundMuted = !stats.isSoundEnabled,
                 onToggleSound = { viewModel.toggleSound() },
+                reactions = liveReactions,
+                onSendReaction = { content -> viewModel.sendUserReaction(content) },
                 onCutNumber = { number ->
                     viewModel.cutNumber(number)
                 },
@@ -181,6 +187,7 @@ fun KidsBingoApp(
                 onUpdateFriendLevel = { name, level -> viewModel.updateFriendLevel(name, level) },
                 onChallengeFriend = { friend ->
                     viewModel.prepareFriendChallenge(friend)
+                    navController.navigate("classic_setup")
                 },
                 onProceedToSetup = {
                     navController.navigate("classic_setup")

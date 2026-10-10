@@ -18,7 +18,11 @@ data class UserStats(
     val isAutoDaubEnabled: Boolean = false,
     val lastDailyRewardTime: Long = 0L,
     val dailyRewardStreak: Int = 0,
-    val isAdMobTestEnabled: Boolean = true
+    val isAdMobTestEnabled: Boolean = true,
+    val userName: String = "MindPlayer_77",
+    val loginProvider: String = "GUEST", // "GUEST", "GOOGLE", "FACEBOOK"
+    val userAvatar: String = "🎯",
+    val playerId: String = "MB-7429"
 ) {
     val xpForNextLevel: Int get() = level * 250
 

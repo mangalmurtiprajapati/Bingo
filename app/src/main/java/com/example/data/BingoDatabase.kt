@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [UserStatsEntity::class, AchievementEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class BingoDatabase : RoomDatabase() {
@@ -23,7 +23,9 @@ abstract class BingoDatabase : RoomDatabase() {
                     context.applicationContext,
                     BingoDatabase::class.java,
                     "lucky_bingo_offline.db"
-                ).build()
+                )
+                    .fallbackToDestructiveMigration()
+                    .build()
                 INSTANCE = instance
                 instance
             }

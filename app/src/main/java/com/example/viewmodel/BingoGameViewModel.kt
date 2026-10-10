@@ -7,6 +7,7 @@ import com.example.data.BingoDatabase
 import com.example.data.BingoRepository
 import com.example.model.BingoCard
 import com.example.model.BingoTheme
+import com.example.model.ChatReaction
 import com.example.model.ClassicBingoBoard
 import com.example.model.FriendProfile
 import com.example.model.GameDifficulty
@@ -55,11 +56,16 @@ data class ClassicMatchState(
     val onlineStatusMessage: String = "Ready to play",
     val matchedOpponentName: String? = null,
     val matchedOpponentLevel: Int = 1,
+    val opponentAvatar: String = "😎",
+    val isOpponentOnline: Boolean = true,
+    val opponentSetupProgress: Int = 18,
+    val isSimultaneousFriendMode: Boolean = false,
     val challengeLevel: Int = 1,
     val friendsList: List<FriendProfile> = listOf(
-        FriendProfile("Rohan_Star", 3, "Won 12 duels"),
-        FriendProfile("Priya_Mind", 2, "Won 8 duels"),
-        FriendProfile("Aarav_Ace", 4, "Won 19 duels")
+        FriendProfile("Rohan_Star", 3, "Won 12 duels", isOnline = true, avatarEmoji = "🔥"),
+        FriendProfile("Priya_Mind", 2, "Won 8 duels", isOnline = true, avatarEmoji = "🌸"),
+        FriendProfile("Aarav_Ace", 4, "Won 19 duels", isOnline = false, avatarEmoji = "⚡"),
+        FriendProfile("Simran_Pro", 5, "Won 24 duels", isOnline = true, avatarEmoji = "👑")
     )
 )
 
@@ -91,6 +97,9 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _classicState = MutableStateFlow(ClassicMatchState())
     val classicState: StateFlow<ClassicMatchState> = _classicState.asStateFlow()
+
+    private val _liveReactions = MutableStateFlow<List<ChatReaction>>(emptyList())
+    val liveReactions: StateFlow<List<ChatReaction>> = _liveReactions.asStateFlow()
 
     private var ballCallJob: Job? = null
     private var computerTurnJob: Job? = null
@@ -384,15 +393,15 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
         val current = _classicState.value
         soundManager.playClick()
 
-        if (current.gameMode == GameMode.PLAY_WITH_FRIEND && current.currentSetupPlayer == 1) {
-            // Move to Player 2's board setup
+        if (current.gameMode == GameMode.PLAY_WITH_FRIEND && !current.isSimultaneousFriendMode && current.currentSetupPlayer == 1) {
+            // Move to Player 2's board setup only for offline Pass & Play on same device
             _classicState.value = current.copy(
                 currentSetupPlayer = 2,
                 player2OrComputerBoard = ClassicBingoBoard()
             )
         } else {
-            // Start the actual match
-            val finalComputerBoard = if ((current.gameMode == GameMode.VS_COMPUTER || current.gameMode == GameMode.PLAY_ONLINE) && !current.player2OrComputerBoard.isFull) {
+            // Simultaneous mode or Player 2 ready: Start match directly
+            val finalOpponentBoard = if (!current.player2OrComputerBoard.isFull) {
                 ClassicBingoBoard.generateRandomBoard()
             } else {
                 current.player2OrComputerBoard
@@ -400,7 +409,7 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
 
             _classicState.value = current.copy(
                 isSetupComplete = true,
-                player2OrComputerBoard = finalComputerBoard,
+                player2OrComputerBoard = finalOpponentBoard,
                 matchTurn = MatchTurn.PLAYER_1_TURN,
                 viewingBoardPlayer = 1,
                 matchOutcome = MatchOutcome.IN_PROGRESS
@@ -464,6 +473,7 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
             )
             soundManager.stopAmbientMusic()
             soundManager.playLineComplete()
+            postOpponentReaction("🤝 Wow! Both got 5 lines! Perfect TIE!")
             viewModelScope.launch {
                 repository.recordGameFinished(
                     isWin = false,
@@ -489,6 +499,7 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
             )
             soundManager.stopAmbientMusic()
             soundManager.playWinFanfare()
+            postOpponentReaction("🎉 Congratulations! You completed 5 lines first!")
             viewModelScope.launch {
                 repository.recordGameFinished(
                     isWin = true,
@@ -506,17 +517,20 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
                 lastCutNumber = number,
                 lastCutBy = cutByName,
                 cutHistory = updatedHistory,
-                matchOutcome = MatchOutcome.COMPUTER_OR_PLAYER_2_WON
+                matchOutcome = MatchOutcome.COMPUTER_OR_PLAYER_2_WON,
+                coinsEarned = 50,
+                xpEarned = 50
             )
             soundManager.stopAmbientMusic()
+            soundManager.playCrossSound()
+            postOpponentReaction("🥳 BINGO! Great duel, let's rematch!")
             viewModelScope.launch {
                 repository.recordGameFinished(
                     isWin = false,
                     daubsMade = updatedP1Board.crossedNumbers.size,
-                    coinsEarned = 25
+                    coinsEarned = 50
                 )
             }
-            return
         }
 
         // If game continues:
@@ -824,15 +838,88 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun prepareFriendChallenge(friend: FriendProfile): String {
         val code = generateNewOnlineRoom()
+        initClassicGame(GameMode.PLAY_ONLINE)
         _classicState.value = _classicState.value.copy(
             matchedOpponentName = friend.name,
             matchedOpponentLevel = friend.level,
+            opponentAvatar = friend.avatarEmoji,
             challengeLevel = friend.level,
             onlineStatusMessage = "Challenging ${friend.name} (Lvl ${friend.level}) in Room #$code!",
-            gameMode = GameMode.PLAY_ONLINE
+            gameMode = GameMode.PLAY_ONLINE,
+            isSimultaneousFriendMode = true
         )
-        initClassicGame(GameMode.PLAY_ONLINE)
         return code
+    }
+
+    fun sendUserReaction(content: String) {
+        val stats = _userStats.value
+        val userReaction = ChatReaction(
+            senderName = stats.userName,
+            senderAvatar = stats.userAvatar,
+            isUser = true,
+            content = content
+        )
+        _liveReactions.value = (_liveReactions.value + userReaction).takeLast(6)
+        soundManager.playReaction()
+
+        // Trigger realistic simulated opponent response in online or bot matches
+        viewModelScope.launch {
+            delay((1000L..2200L).random())
+            val state = _classicState.value
+            val oppName = state.matchedOpponentName ?: if (state.gameMode == GameMode.VS_COMPUTER) "Computer AI" else "Opponent"
+            val oppAvatar = state.opponentAvatar
+
+            val replies = when (content) {
+                "🔥" -> listOf("👏", "😎 Game on!", "🔥 Let's go!", "💪 Intense!")
+                "😂" -> listOf("😂 Haha!", "👀 Focus on lines!", "😜", "🤣")
+                "👏" -> listOf("🤝 Thank you!", "😎 Appreciate it!", "✨ Keep playing!")
+                "😱" -> listOf("😅 Close call!", "😱 Tension high!", "🎯 My turn next!")
+                "😎" -> listOf("😏 We will see!", "🔥 Don't celebrate yet!", "💪 Challenge accepted!")
+                "🎯" -> listOf("👏 Great pick!", "🎯 Good eye!", "😱 Watch my strike!")
+                "🥳" -> listOf("🎉 GG!", "🥳 Having fun!", "✨ Great game!")
+                "🍀" -> listOf("🍀 May the best board win!", "🤝 Luck to you too!")
+                "Good luck! 🍀" -> listOf("🍀 Good luck to you too!", "🤝 Let's play a great match!", "⚡ Best of luck!")
+                "Almost got BINGO! 😱" -> listOf("😱 Not if I get 5 lines first!", "👀 So close!", "🔥 Watch out for mine!")
+                "Nice cut! 👏" -> listOf("🤝 Thanks, buddy!", "😎 Saw that coming!", "🎯 Strategic move!")
+                "Watch this! 😎" -> listOf("👀 Show me!", "🔥 Bring it on!", "😏 Let's see!")
+                "GG (Good Game) 🤝" -> listOf("🤝 Well played!", "🎉 Awesome match!", "🔥 Rematch next!")
+                "Rematch? 🔥" -> listOf("🔥 Absolutely!", "👍 Let's play again!", "😎 Ready when you are!")
+                else -> listOf("👍", "😎", "🔥", "🤝", "🎯")
+            }
+
+            val oppReaction = ChatReaction(
+                senderName = oppName,
+                senderAvatar = oppAvatar,
+                isUser = false,
+                content = replies.random()
+            )
+            _liveReactions.value = (_liveReactions.value + oppReaction).takeLast(6)
+            soundManager.playReaction()
+        }
+    }
+
+    fun postOpponentReaction(content: String) {
+        val state = _classicState.value
+        val oppName = state.matchedOpponentName ?: if (state.gameMode == GameMode.VS_COMPUTER) "Computer AI" else "Opponent"
+        val oppAvatar = state.opponentAvatar
+        val oppReaction = ChatReaction(
+            senderName = oppName,
+            senderAvatar = oppAvatar,
+            isUser = false,
+            content = content
+        )
+        _liveReactions.value = (_liveReactions.value + oppReaction).takeLast(6)
+        soundManager.playReaction()
+    }
+
+    fun updateUserProfile(name: String, provider: String, avatar: String) {
+        viewModelScope.launch {
+            repository.updateUserProfile(name = name, provider = provider, avatar = avatar)
+        }
+    }
+
+    fun clearLiveReactions() {
+        _liveReactions.value = emptyList()
     }
 
     // ============================================================================

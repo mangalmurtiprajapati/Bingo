@@ -39,7 +39,15 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -73,13 +81,31 @@ fun BoardSetupScreen(
     val currentBoard = if (state.currentSetupPlayer == 1) state.player1Board else state.player2OrComputerBoard
     val isFriendMode = state.gameMode == GameMode.PLAY_WITH_FRIEND
     val playerTitle = when {
-        isFriendMode && state.currentSetupPlayer == 1 -> "Player 1 Setup"
-        isFriendMode && state.currentSetupPlayer == 2 -> "Player 2 Setup"
+        state.isSimultaneousFriendMode -> "Duelling ${state.matchedOpponentName ?: "Friend"} ⚡"
+        isFriendMode && state.currentSetupPlayer == 1 -> "Player 1 Setup (Pass & Play)"
+        isFriendMode && state.currentSetupPlayer == 2 -> "Player 2 Setup (Pass & Play)"
         state.gameMode == GameMode.VS_COMPUTER -> "Setup vs Computer"
         else -> "Setup Online Board"
     }
 
     val isBoardComplete = currentBoard.isFull
+
+    // 30-Second Simultaneous Setup Countdown Timer for Online and Duel modes
+    var secondsLeft by remember { mutableIntStateOf(30) }
+    var opponentBoxesFilled by remember { mutableIntStateOf(12) }
+
+    LaunchedEffect(Unit) {
+        while (secondsLeft > 0) {
+            kotlinx.coroutines.delay(1000)
+            secondsLeft--
+            if (opponentBoxesFilled < 25 && kotlin.random.Random.nextFloat() > 0.35f) {
+                opponentBoxesFilled = (opponentBoxesFilled + (1..2).random()).coerceAtMost(25)
+            }
+        }
+        if (!currentBoard.isFull) {
+            onAutoFill()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -93,9 +119,9 @@ fun BoardSetupScreen(
                             color = Color.White
                         )
                         Text(
-                            text = "Fill 1 to 25 in 25 boxes",
+                            text = if (state.isSimultaneousFriendMode || state.gameMode == GameMode.PLAY_ONLINE) "⏱️ Simultaneous 30s Setup • Both filling now!" else "Fill 1 to 25 in 25 boxes",
                             fontSize = 12.sp,
-                            color = Color.White.copy(alpha = 0.75f)
+                            color = Color.White.copy(alpha = 0.85f)
                         )
                     }
                 },
@@ -136,10 +162,75 @@ fun BoardSetupScreen(
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Info / Progress Card
+                // Simultaneous Countdown & Opponent Live Sync Bar
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A).copy(alpha = 0.95f)),
+                    border = androidx.compose.foundation.BorderStroke(1.5.dp, if (secondsLeft <= 5) Color(0xFFFF1744) else Color(0xFFFFD700).copy(alpha = 0.6f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = if (secondsLeft <= 5) "⚡ HURRY UP!" else "⏱️ SETUP TIMER:",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = if (secondsLeft <= 5) Color(0xFFFF5252) else Color(0xFFFFD700)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "00:${if (secondsLeft < 10) "0$secondsLeft" else "$secondsLeft"}",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color.White
+                                )
+                            }
+
+                            // Opponent Progress Badge
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF00E676))
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "${state.matchedOpponentName ?: "Opponent"}: $opponentBoxesFilled/25",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF00E676)
+                                )
+                            }
+                        }
+
+                        LinearProgressIndicator(
+                            progress = { secondsLeft / 30f },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(5.dp)
+                                .clip(RoundedCornerShape(3.dp)),
+                            color = if (secondsLeft <= 5) Color(0xFFFF1744) else Color(0xFFFFD700),
+                            trackColor = Color.White.copy(alpha = 0.15f)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Info / Progress Card - Sleek dark container with gold border and 100% readable text
                 Card(
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = theme.cardBgColor.copy(alpha = 0.92f)),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A).copy(alpha = 0.95f)),
+                    border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFFFFD700).copy(alpha = 0.5f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
@@ -158,19 +249,19 @@ fun BoardSetupScreen(
                                 Icon(
                                     Icons.Default.TouchApp,
                                     contentDescription = null,
-                                    tint = theme.accentColor,
+                                    tint = Color(0xFFFFD700),
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = if (!isBoardComplete) {
-                                        "Next: #${currentBoard.nextNumberToPlace}"
+                                        "Next Number to Place: #${currentBoard.nextNumberToPlace}"
                                     } else {
-                                        "Ready to Play!"
+                                        "Board Ready! 🎯"
                                     },
-                                    fontWeight = FontWeight.ExtraBold,
+                                    fontWeight = FontWeight.Black,
                                     fontSize = 15.sp,
-                                    color = if (isBoardComplete) Color(0xFF00E676) else theme.accentColor,
+                                    color = if (isBoardComplete) Color(0xFF00E676) else Color(0xFFFFD700),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -179,8 +270,8 @@ fun BoardSetupScreen(
                             Text(
                                 text = "${currentBoard.numbersPlacedCount} / 25 Filled",
                                 fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = theme.textPrimary
+                                fontWeight = FontWeight.Black,
+                                color = Color.White
                             )
                         }
 
@@ -190,18 +281,19 @@ fun BoardSetupScreen(
                                 .fillMaxWidth()
                                 .height(8.dp)
                                 .clip(RoundedCornerShape(4.dp)),
-                            color = if (isBoardComplete) Color(0xFF00E676) else theme.primaryColor,
-                            trackColor = theme.primaryColor.copy(alpha = 0.2f)
+                            color = if (isBoardComplete) Color(0xFF00E676) else Color(0xFFFFD700),
+                            trackColor = Color.White.copy(alpha = 0.15f)
                         )
 
                         Text(
                             text = if (!isBoardComplete) {
-                                "Tap any box to place #${currentBoard.nextNumberToPlace}. Tap a filled box to remove it."
+                                "Tap any box to place #${currentBoard.nextNumberToPlace}. Tap placed number to undo."
                             } else {
-                                "All 25 boxes filled! You can now start the match."
+                                "All 25 boxes filled! Ready to start the match."
                             },
                             fontSize = 12.sp,
-                            color = theme.textPrimary.copy(alpha = 0.8f),
+                            fontWeight = FontWeight.Medium,
+                            color = Color.White.copy(alpha = 0.85f),
                             textAlign = TextAlign.Start
                         )
                     }
@@ -250,8 +342,9 @@ fun BoardSetupScreen(
                             .height(48.dp)
                             .testTag("clear_board_button"),
                         colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = Color.White
+                            contentColor = Color(0xFFD32F2F)
                         ),
+                        border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFFD32F2F).copy(alpha = 0.6f)),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -287,8 +380,8 @@ fun BoardSetupScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = when {
-                            isFriendMode && state.currentSetupPlayer == 1 -> "NEXT: PLAYER 2 BOARD"
-                            else -> "START MATCH"
+                            isFriendMode && !state.isSimultaneousFriendMode && state.currentSetupPlayer == 1 -> "NEXT: PLAYER 2 BOARD"
+                            else -> "START MATCH 🎯"
                         },
                         fontSize = 17.sp,
                         fontWeight = FontWeight.Black

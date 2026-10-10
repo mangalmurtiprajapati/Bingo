@@ -51,6 +51,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
@@ -107,6 +108,7 @@ fun OnlineLobbyScreen(
     var showAddFriendDialog by remember { mutableStateOf(false) }
     var newFriendName by remember { mutableStateOf("") }
     var newFriendLevel by remember { mutableIntStateOf(1) }
+    var selectedFriendForChallenge by remember { mutableStateOf<FriendProfile?>(null) }
 
     fun refreshNetwork() {
         isOnlineConnected = NetworkUtils.isNetworkAvailable(context)
@@ -701,34 +703,51 @@ Hey! I've created a BINGO duel for you!
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Text(
-                                                    friend.name,
-                                                    fontWeight = FontWeight.Black,
-                                                    fontSize = 14.sp,
-                                                    color = Color.White
-                                                )
-                                                Spacer(modifier = Modifier.width(6.dp))
-                                                Box(
-                                                    modifier = Modifier
-                                                        .clip(RoundedCornerShape(6.dp))
-                                                        .background(Color(0xFFFFB300))
-                                                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                                                ) {
+                                        Row(
+                                            modifier = Modifier.weight(1f),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(36.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color.White.copy(alpha = 0.15f)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(text = friend.avatarEmoji, fontSize = 20.sp)
+                                            }
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Column {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
                                                     Text(
-                                                        "Level ${friend.level} ⭐",
-                                                        fontSize = 10.sp,
+                                                        friend.name,
                                                         fontWeight = FontWeight.Black,
-                                                        color = Color(0xFF1A0033)
+                                                        fontSize = 14.sp,
+                                                        color = Color.White
+                                                    )
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(7.dp)
+                                                            .clip(CircleShape)
+                                                            .background(if (friend.isOnline) Color(0xFF00E676) else Color.Gray)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text(
+                                                        if (friend.isOnline) "Online" else "Offline",
+                                                        fontSize = 10.sp,
+                                                        color = if (friend.isOnline) Color(0xFF00E676) else Color.Gray,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Text(
+                                                        "Lvl ${friend.level} • ${friend.statsDesc}",
+                                                        fontSize = 11.sp,
+                                                        color = Color.White.copy(alpha = 0.7f)
                                                     )
                                                 }
                                             }
-                                            Text(
-                                                friend.statsDesc,
-                                                fontSize = 11.sp,
-                                                color = Color.White.copy(alpha = 0.7f)
-                                            )
                                         }
 
                                         Row(
@@ -769,8 +788,15 @@ Hey! I've created a BINGO duel for you!
                                             // Challenge Button
                                             Button(
                                                 onClick = {
-                                                    onChallengeFriend(friend)
-                                                    onProceedToSetup()
+                                                    refreshNetwork()
+                                                    if (!isOnlineConnected) {
+                                                        Toast.makeText(context, "Please connect to Wi-Fi or Mobile Network first!", Toast.LENGTH_SHORT).show()
+                                                    } else if (!friend.isOnline) {
+                                                        Toast.makeText(context, "${friend.name} is Offline. Sending WhatsApp challenge link!", Toast.LENGTH_SHORT).show()
+                                                        shareChallengeViaWhatsApp(state.roomCode, friend.level, friend.name)
+                                                    } else {
+                                                        selectedFriendForChallenge = friend
+                                                    }
                                                 },
                                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB300)),
                                                 shape = RoundedCornerShape(8.dp),
@@ -874,6 +900,91 @@ Hey! I've created a BINGO duel for you!
             },
             dismissButton = {
                 OutlinedButton(onClick = { showAddFriendDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Live Online Challenge Notification Modal (Simulates challenge appearing on friend's device)
+    if (selectedFriendForChallenge != null) {
+        val targetFriend = selectedFriendForChallenge!!
+        var challengeStep by remember { mutableIntStateOf(1) } // 1: Alert ringing on friend's phone, 2: Friend accepted!
+
+        androidx.compose.runtime.LaunchedEffect(targetFriend) {
+            challengeStep = 1
+            kotlinx.coroutines.delay(1800)
+            challengeStep = 2
+        }
+
+        AlertDialog(
+            onDismissRequest = { selectedFriendForChallenge = null },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = targetFriend.avatarEmoji, fontSize = 24.sp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (challengeStep == 1) "Sending Challenge Alert..." else "Challenge Accepted! 🎉",
+                        fontWeight = FontWeight.Black,
+                        fontSize = 17.sp,
+                        color = Color(0xFF0D47A1)
+                    )
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (challengeStep == 1) {
+                        Text(
+                            text = "📲 Live Mind Bingo challenge sent to ${targetFriend.name}'s phone!",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF1E293B)
+                        )
+                        Text(
+                            text = "🟢 ${targetFriend.name} is ONLINE. Notification is ringing on their device screen right now!",
+                            fontSize = 12.sp,
+                            color = Color(0xFF00C853),
+                            fontWeight = FontWeight.Medium
+                        )
+                        LinearProgressIndicator(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(5.dp)
+                                .clip(RoundedCornerShape(3.dp)),
+                            color = Color(0xFFFFB300)
+                        )
+                    } else {
+                        Text(
+                            text = "✅ ${targetFriend.name} received the alert and tapped ACCEPT!",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color(0xFF00C853)
+                        )
+                        Text(
+                            text = "You and ${targetFriend.name} will now fill your 1-25 boards at the same time in 30 seconds! Match starts right after.",
+                            fontSize = 12.sp,
+                            color = Color(0xFF475569)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val f = targetFriend
+                        selectedFriendForChallenge = null
+                        onChallengeFriend(f)
+                        onProceedToSetup()
+                    },
+                    enabled = challengeStep == 2,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB300)),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("START 30s BOARD SETUP 🎯", color = Color(0xFF1A0033), fontWeight = FontWeight.Black)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { selectedFriendForChallenge = null }) {
                     Text("Cancel")
                 }
             }

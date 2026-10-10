@@ -25,7 +25,11 @@ data class UserStatsEntity(
     val isAutoDaubEnabled: Boolean = false,
     val lastDailyRewardTime: Long = 0L,
     val dailyRewardStreak: Int = 0,
-    val isAdMobTestEnabled: Boolean = true
+    val isAdMobTestEnabled: Boolean = true,
+    val userName: String = "MindPlayer_77",
+    val loginProvider: String = "GUEST",
+    val userAvatar: String = "🎯",
+    val playerId: String = "MB-7429"
 ) {
     fun toDomain(): UserStats {
         val themesList = unlockedThemeIds.split(",")
@@ -50,7 +54,11 @@ data class UserStatsEntity(
             isAutoDaubEnabled = isAutoDaubEnabled,
             lastDailyRewardTime = lastDailyRewardTime,
             dailyRewardStreak = dailyRewardStreak,
-            isAdMobTestEnabled = isAdMobTestEnabled
+            isAdMobTestEnabled = isAdMobTestEnabled,
+            userName = userName,
+            loginProvider = loginProvider,
+            userAvatar = userAvatar,
+            playerId = playerId
         )
     }
 
@@ -75,7 +83,11 @@ data class UserStatsEntity(
                 isAutoDaubEnabled = stats.isAutoDaubEnabled,
                 lastDailyRewardTime = stats.lastDailyRewardTime,
                 dailyRewardStreak = stats.dailyRewardStreak,
-                isAdMobTestEnabled = stats.isAdMobTestEnabled
+                isAdMobTestEnabled = stats.isAdMobTestEnabled,
+                userName = stats.userName,
+                loginProvider = stats.loginProvider,
+                userAvatar = stats.userAvatar,
+                playerId = stats.playerId
             )
         }
     }
