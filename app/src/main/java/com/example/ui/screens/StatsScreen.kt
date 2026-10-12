@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -43,6 +44,10 @@ fun StatsScreen(
     activeTheme: BingoTheme,
     onBack: () -> Unit
 ) {
+    BackHandler {
+        onBack()
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()

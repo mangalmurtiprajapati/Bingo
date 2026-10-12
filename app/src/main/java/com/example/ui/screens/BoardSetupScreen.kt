@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -79,6 +80,10 @@ fun BoardSetupScreen(
     onBack: () -> Unit
 ) {
     val currentBoard = if (state.currentSetupPlayer == 1) state.player1Board else state.player2OrComputerBoard
+
+    BackHandler {
+        onBack()
+    }
     val isFriendMode = state.gameMode == GameMode.PLAY_WITH_FRIEND
     val playerTitle = when {
         state.isSimultaneousFriendMode -> "Duelling ${state.matchedOpponentName ?: "Friend"} ⚡"
@@ -89,21 +94,24 @@ fun BoardSetupScreen(
     }
 
     val isBoardComplete = currentBoard.isFull
+    val isSimultaneous = state.isSimultaneousFriendMode || state.gameMode == GameMode.PLAY_ONLINE
 
-    // 30-Second Simultaneous Setup Countdown Timer for Online and Duel modes
+    // 30-Second Simultaneous Setup Countdown Timer (Only for Online Duel modes)
     var secondsLeft by remember { mutableIntStateOf(30) }
     var opponentBoxesFilled by remember { mutableIntStateOf(12) }
 
-    LaunchedEffect(Unit) {
-        while (secondsLeft > 0) {
-            kotlinx.coroutines.delay(1000)
-            secondsLeft--
-            if (opponentBoxesFilled < 25 && kotlin.random.Random.nextFloat() > 0.35f) {
-                opponentBoxesFilled = (opponentBoxesFilled + (1..2).random()).coerceAtMost(25)
+    if (isSimultaneous) {
+        LaunchedEffect(Unit) {
+            while (secondsLeft > 0) {
+                kotlinx.coroutines.delay(1000)
+                secondsLeft--
+                if (opponentBoxesFilled < 25 && kotlin.random.Random.nextFloat() > 0.35f) {
+                    opponentBoxesFilled = (opponentBoxesFilled + (1..2).random()).coerceAtMost(25)
+                }
             }
-        }
-        if (!currentBoard.isFull) {
-            onAutoFill()
+            if (!currentBoard.isFull) {
+                onAutoFill()
+            }
         }
     }
 
@@ -119,7 +127,7 @@ fun BoardSetupScreen(
                             color = Color.White
                         )
                         Text(
-                            text = if (state.isSimultaneousFriendMode || state.gameMode == GameMode.PLAY_ONLINE) "⏱️ Simultaneous 30s Setup • Both filling now!" else "Fill 1 to 25 in 25 boxes",
+                            text = if (isSimultaneous) "⏱️ Simultaneous 30s Setup • Both filling now!" else "Fill 1 to 25 in 25 boxes at your own pace",
                             fontSize = 12.sp,
                             color = Color.White.copy(alpha = 0.85f)
                         )
@@ -162,69 +170,71 @@ fun BoardSetupScreen(
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Simultaneous Countdown & Opponent Live Sync Bar
-                Card(
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A).copy(alpha = 0.95f)),
-                    border = androidx.compose.foundation.BorderStroke(1.5.dp, if (secondsLeft <= 5) Color(0xFFFF1744) else Color(0xFFFFD700).copy(alpha = 0.6f)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                // Simultaneous Countdown & Opponent Live Sync Bar (Only shown in Duel / Online modes)
+                if (isSimultaneous) {
+                    Card(
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A).copy(alpha = 0.95f)),
+                        border = androidx.compose.foundation.BorderStroke(1.5.dp, if (secondsLeft <= 5) Color(0xFFFF1744) else Color(0xFFFFD700).copy(alpha = 0.6f)),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                        Column(
+                            modifier = Modifier.padding(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = if (secondsLeft <= 5) "⚡ HURRY UP!" else "⏱️ SETUP TIMER:",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = if (secondsLeft <= 5) Color(0xFFFF5252) else Color(0xFFFFD700)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "00:${if (secondsLeft < 10) "0$secondsLeft" else "$secondsLeft"}",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = Color.White
-                                )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = if (secondsLeft <= 5) "⚡ HURRY UP!" else "⏱️ SETUP TIMER:",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = if (secondsLeft <= 5) Color(0xFFFF5252) else Color(0xFFFFD700)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "00:${if (secondsLeft < 10) "0$secondsLeft" else "$secondsLeft"}",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color.White
+                                    )
+                                }
+
+                                // Opponent Progress Badge
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF00E676))
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "${state.matchedOpponentName ?: "Opponent"}: $opponentBoxesFilled/25",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF00E676)
+                                    )
+                                }
                             }
 
-                            // Opponent Progress Badge
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFF00E676))
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "${state.matchedOpponentName ?: "Opponent"}: $opponentBoxesFilled/25",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF00E676)
-                                )
-                            }
+                            LinearProgressIndicator(
+                                progress = { secondsLeft / 30f },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(5.dp)
+                                    .clip(RoundedCornerShape(3.dp)),
+                                color = if (secondsLeft <= 5) Color(0xFFFF1744) else Color(0xFFFFD700),
+                                trackColor = Color.White.copy(alpha = 0.15f)
+                            )
                         }
-
-                        LinearProgressIndicator(
-                            progress = { secondsLeft / 30f },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(5.dp)
-                                .clip(RoundedCornerShape(3.dp)),
-                            color = if (secondsLeft <= 5) Color(0xFFFF1744) else Color(0xFFFFD700),
-                            trackColor = Color.White.copy(alpha = 0.15f)
-                        )
                     }
-                }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
 
                 // Info / Progress Card - Sleek dark container with gold border and 100% readable text
                 Card(

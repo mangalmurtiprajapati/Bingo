@@ -5,7 +5,10 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -33,6 +36,8 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MeetingRoom
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PersonAdd
@@ -41,6 +46,7 @@ import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.WifiOff
@@ -80,7 +86,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.BingoTheme
+import com.example.model.ChallengeStatus
+import com.example.model.FriendChallenge
 import com.example.model.FriendProfile
+import com.example.model.OnlinePlayer
 import com.example.util.NetworkUtils
 import com.example.viewmodel.ClassicMatchState
 
@@ -89,6 +98,11 @@ import com.example.viewmodel.ClassicMatchState
 fun OnlineLobbyScreen(
     state: ClassicMatchState,
     theme: BingoTheme,
+    currentUserName: String = "Player",
+    currentUserId: String = "",
+    onlinePlayers: List<OnlinePlayer> = emptyList(),
+    incomingChallenges: List<FriendChallenge> = emptyList(),
+    outgoingChallenge: FriendChallenge? = null,
     onCreateRoom: () -> Unit,
     onJoinRoom: (String) -> Unit,
     onQuickMatch: () -> Unit,
@@ -97,6 +111,10 @@ fun OnlineLobbyScreen(
     onAddFriend: (String, Int) -> Unit = { _, _ -> },
     onUpdateFriendLevel: (String, Int) -> Unit = { _, _ -> },
     onChallengeFriend: (FriendProfile) -> Unit = {},
+    onSendCustomChallenge: (String, Int) -> Unit = { _, _ -> },
+    onAcceptChallenge: (FriendChallenge) -> Unit = {},
+    onRejectChallenge: (FriendChallenge) -> Unit = {},
+    onCancelOutgoingChallenge: () -> Unit = {},
     onProceedToSetup: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -106,13 +124,30 @@ fun OnlineLobbyScreen(
     var networkTypeName by remember { mutableStateOf(NetworkUtils.getNetworkTypeName(context)) }
 
     var showAddFriendDialog by remember { mutableStateOf(false) }
+    var showCustomChallengeDialog by remember { mutableStateOf(false) }
+    var showShareDialog by remember { mutableStateOf(false) }
     var newFriendName by remember { mutableStateOf("") }
     var newFriendLevel by remember { mutableIntStateOf(1) }
+    var customTargetName by remember { mutableStateOf("") }
+    var customTargetLevel by remember { mutableIntStateOf(1) }
     var selectedFriendForChallenge by remember { mutableStateOf<FriendProfile?>(null) }
+
+    // Intercept hardware and gesture back button to cancel search and navigate safely
+    BackHandler {
+        onCancelSearch()
+        onBack()
+    }
 
     fun refreshNetwork() {
         isOnlineConnected = NetworkUtils.isNetworkAvailable(context)
         networkTypeName = NetworkUtils.getNetworkTypeName(context)
+    }
+
+    fun copyRoomCodeOnly(roomCode: String) {
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText("Bingo Room Code", roomCode)
+        clipboard.setPrimaryClip(clip)
+        Toast.makeText(context, "Room Code #$roomCode copied! Send to your friend.", Toast.LENGTH_SHORT).show()
     }
 
     fun shareChallengeViaWhatsApp(roomCode: String, level: Int, friendName: String? = null) {
@@ -142,34 +177,28 @@ Can you beat my brain strategy? Join now! 🎯⚡
         try {
             context.startActivity(whatsappIntent)
         } catch (_: Exception) {
-            // WhatsApp not installed, fallback to standard chooser
-            val chooser = Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
-                type = "text/plain"
-                putExtra(Intent.EXTRA_TEXT, message)
-            }, "Share BINGO Challenge")
-            context.startActivity(chooser)
+            // WhatsApp not installed, copy to clipboard instead of opening Bluetooth Quick Share chooser
+            copyRoomCodeOnly(roomCode)
+            showShareDialog = true
+        }
+    }
+
+    fun shareChallengeViaSms(roomCode: String, level: Int) {
+        val message = "Play 5x5 Kids Mind Bingo with me! Room Code: #$roomCode (Level $level). Open app and tap Play Online -> Enter Room Code!"
+        try {
+            val smsIntent = Intent(Intent.ACTION_VIEW).apply {
+                data = Uri.parse("sms:")
+                putExtra("sms_body", message)
+            }
+            context.startActivity(smsIntent)
+        } catch (_: Exception) {
+            copyRoomCodeOnly(roomCode)
         }
     }
 
     fun shareChallengeGeneral(roomCode: String, level: Int) {
-        val message = """
-🎮 *KIDS MIND BINGO 5x5 CHALLENGE!* 🧠✨
-
-Hey! I've created a BINGO duel for you!
-🏆 *Challenge Level:* Level $level
-🔑 *Room Code:* *$roomCode*
-
-1. Open *Kids Mind Bingo*
-2. Tap 'Play Online'
-3. Enter Room Code: *$roomCode*
-4. Fill your 1-25 numbers and race to 5 lines! 🎯
-        """.trimIndent()
-
-        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, message)
-        }
-        context.startActivity(Intent.createChooser(shareIntent, "Share Challenge with Friends"))
+        // Open custom in-app share dialog to prevent getting stuck in Android Bluetooth Quick Share!
+        showShareDialog = true
     }
 
     Scaffold(
@@ -186,7 +215,10 @@ Hey! I've created a BINGO duel for you!
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = {
+                        onCancelSearch()
+                        onBack()
+                    }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
@@ -195,6 +227,16 @@ Hey! I've created a BINGO duel for you!
                     }
                 },
                 actions = {
+                    IconButton(onClick = {
+                        onCancelSearch()
+                        onBack()
+                    }) {
+                        Icon(
+                            Icons.Default.Home,
+                            contentDescription = "Home",
+                            tint = Color.White
+                        )
+                    }
                     IconButton(onClick = { refreshNetwork() }) {
                         Icon(
                             Icons.Default.Refresh,
@@ -224,6 +266,140 @@ Hey! I've created a BINGO duel for you!
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
+                // User Profile & Tag Banner
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.15f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("👤", fontSize = 20.sp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    currentUserName,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 14.sp
+                                )
+                                Text(
+                                    "ID: ${currentUserId.take(12).ifEmpty { "guest" }}",
+                                    color = Color(0xFFFFD700),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                        Button(
+                            onClick = { showCustomChallengeDialog = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD700)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.height(34.dp),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text("CHALLENGE ANYONE ⚔️", fontWeight = FontWeight.Black, fontSize = 11.sp, color = Color(0xFF1A0033))
+                        }
+                    }
+                }
+
+                // Incoming Challenges from Friends (Real-Time Firestore Alerts)
+                incomingChallenges.forEach { challenge ->
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1B4B)),
+                        border = BorderStroke(2.dp, Color(0xFFFFD700)),
+                        elevation = CardDefaults.cardElevation(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("🚨", fontSize = 22.sp)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        "INCOMING DUEL CHALLENGE!",
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 14.sp,
+                                        color = Color(0xFFFFD700)
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color(0xFFFF3D00).copy(alpha = 0.25f))
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                                ) {
+                                    Text("PENDING", color = Color(0xFFFF8A80), fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                                }
+                            }
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF6366F1)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(challenge.senderAvatar.ifEmpty { "⚔️" }, fontSize = 22.sp)
+                                }
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        "${challenge.senderName} (Level ${challenge.senderLevel})",
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 14.sp,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        "Aapko 5x5 Mind Bingo duel ke liye challenge kiya hai! Room #${challenge.roomCode}",
+                                        fontSize = 12.sp,
+                                        color = Color(0xFFE0E7FF)
+                                    )
+                                }
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Button(
+                                    onClick = { onAcceptChallenge(challenge) },
+                                    modifier = Modifier.weight(1f).height(44.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text("ACCEPT DUEL ⚔️", fontWeight = FontWeight.Black, color = Color.White)
+                                }
+                                OutlinedButton(
+                                    onClick = { onRejectChallenge(challenge) },
+                                    modifier = Modifier.weight(0.8f).height(44.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF8A80)),
+                                    border = BorderStroke(1.dp, Color(0xFFFF8A80)),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text("DECLINE 🛡️", fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // 1. Network / Wi-Fi Connectivity Status Banner
                 if (isOnlineConnected) {
                     Card(
@@ -367,12 +543,28 @@ Hey! I've created a BINGO duel for you!
                                         fontSize = 11.sp
                                     )
 
-                                    OutlinedButton(
-                                        onClick = onCancelSearch,
-                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF8A80)),
-                                        shape = RoundedCornerShape(10.dp)
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text("Cancel Search", fontSize = 12.sp)
+                                        OutlinedButton(
+                                            onClick = onCancelSearch,
+                                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF8A80)),
+                                            shape = RoundedCornerShape(10.dp)
+                                        ) {
+                                            Text("Cancel Search", fontSize = 12.sp)
+                                        }
+
+                                        Button(
+                                            onClick = {
+                                                onCancelSearch()
+                                                onBack()
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                                            shape = RoundedCornerShape(10.dp)
+                                        ) {
+                                            Text("Go Home 🏠", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                                        }
                                     }
                                 }
                             }
@@ -447,9 +639,9 @@ Hey! I've created a BINGO duel for you!
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(
                                 "Choose Challenge Level: Level ${state.challengeLevel}",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp,
-                                color = theme.textPrimary
+                                fontWeight = FontWeight.Black,
+                                fontSize = 13.sp,
+                                color = Color(0xFF0F172A)
                             )
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -461,11 +653,11 @@ Hey! I've created a BINGO duel for you!
                                         modifier = Modifier
                                             .weight(1f)
                                             .clip(RoundedCornerShape(8.dp))
-                                            .background(if (isSelected) Color(0xFFFFB300) else Color.White.copy(alpha = 0.15f))
+                                            .background(if (isSelected) Color(0xFFFFB300) else Color(0xFFF1F5F9))
                                             .border(
-                                                1.dp,
-                                                if (isSelected) Color(0xFFFFD54F) else Color.White.copy(alpha = 0.3f),
-                                                RoundedCornerShape(8.dp)
+                                                width = if (isSelected) 1.5.dp else 1.dp,
+                                                color = if (isSelected) Color(0xFFFF8F00) else Color(0xFFCBD5E1),
+                                                shape = RoundedCornerShape(8.dp)
                                             )
                                             .clickable { onSetChallengeLevel(lvl) }
                                             .padding(vertical = 8.dp),
@@ -475,7 +667,7 @@ Hey! I've created a BINGO duel for you!
                                             "Lvl $lvl",
                                             fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
                                             fontSize = 12.sp,
-                                            color = if (isSelected) Color(0xFF1A0033) else Color.White
+                                            color = if (isSelected) Color(0xFF1A0033) else Color(0xFF334155)
                                         )
                                     }
                                 }
@@ -486,8 +678,9 @@ Hey! I've created a BINGO duel for you!
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color.Black.copy(alpha = 0.3f))
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(Color(0xFF0F172A))
+                                .border(1.5.dp, Color(0xFFFFD700).copy(alpha = 0.5f), RoundedCornerShape(14.dp))
                                 .padding(12.dp)
                         ) {
                             Row(
@@ -495,11 +688,12 @@ Hey! I've created a BINGO duel for you!
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column {
+                                Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         "Room Code (Kamra Code):",
                                         fontSize = 11.sp,
-                                        color = theme.textPrimary.copy(alpha = 0.7f)
+                                        fontWeight = FontWeight.Medium,
+                                        color = Color(0xFF94A3B8)
                                     )
                                     Text(
                                         "#${state.roomCode}",
@@ -509,7 +703,10 @@ Hey! I've created a BINGO duel for you!
                                     )
                                 }
 
-                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
                                     IconButton(
                                         onClick = {
                                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -525,18 +722,73 @@ Hey! I've created a BINGO duel for you!
                                         )
                                     }
 
-                                    OutlinedButton(
+                                    Button(
                                         onClick = onCreateRoom,
                                         shape = RoundedCornerShape(10.dp),
-                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFFD700))
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD700)),
+                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                        modifier = Modifier.height(38.dp)
                                     ) {
-                                        Text("New Code", fontSize = 12.sp)
+                                        Text(
+                                            "New Code",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = Color(0xFF1A0033),
+                                            maxLines = 1
+                                        )
                                     }
                                 }
                             }
                         }
 
-                        // Share Action Buttons: WhatsApp & Any App
+                        // Bluetooth / Quick Share clarification banner
+                        Card(
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF38BDF8).copy(alpha = 0.5f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = Color(0xFF38BDF8),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "✨ No Bluetooth / Quick Share needed! Simply give your 6-digit room code to your friend to join over Wi-Fi/Internet.",
+                                    color = Color(0xFFE0F2FE),
+                                    fontSize = 11.sp,
+                                    lineHeight = 15.sp
+                                )
+                            }
+                        }
+
+                        // Host Direct Start Board Setup Button (Don't make host wait!)
+                        Button(
+                            onClick = onProceedToSetup,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp)
+                                .testTag("host_start_setup_button"),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB300)),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color(0xFF1A0033))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "START BOARD SETUP (HOST) 🎯",
+                                fontWeight = FontWeight.Black,
+                                fontSize = 14.sp,
+                                color = Color(0xFF1A0033)
+                            )
+                        }
+
+                        // Share Action Buttons: WhatsApp & In-App Share
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -555,21 +807,28 @@ Hey! I've created a BINGO duel for you!
                                     "WhatsApp 📲",
                                     fontWeight = FontWeight.Black,
                                     fontSize = 13.sp,
-                                    color = Color.White
+                                    color = Color.White,
+                                    maxLines = 1
                                 )
                             }
 
-                            OutlinedButton(
+                            Button(
                                 onClick = {
-                                    shareChallengeGeneral(state.roomCode, state.challengeLevel)
+                                    showShareDialog = true
                                 },
                                 modifier = Modifier.weight(1f).height(46.dp),
                                 shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0288D1))
                             ) {
                                 Icon(Icons.Default.Share, contentDescription = null, tint = Color.White)
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Share Link 🔗", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                Text(
+                                    "Share Code 🔑",
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 13.sp,
+                                    color = Color.White,
+                                    maxLines = 1
+                                )
                             }
                         }
                     }
@@ -654,52 +913,162 @@ Hey! I've created a BINGO duel for you!
                     }
                 }
 
+                // 4.5. Active Online Players (Real-Time Firebase Firestore)
+                if (onlinePlayers.isNotEmpty()) {
+                    Card(
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(10.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF16A34A))
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        "Online Players in Arena 🟢",
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 15.sp,
+                                        color = Color(0xFF0F172A)
+                                    )
+                                }
+                                Text(
+                                    "${onlinePlayers.size} active",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF16A34A)
+                                )
+                            }
+
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                onlinePlayers.take(5).forEach { player ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(Color(0xFFF1F5F9))
+                                            .padding(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(36.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color(0xFFE0E7FF)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(player.avatar, fontSize = 20.sp)
+                                            }
+                                            Spacer(modifier = Modifier.width(10.dp))
+                                            Column {
+                                                Text(
+                                                    player.name,
+                                                    fontWeight = FontWeight.Black,
+                                                    fontSize = 13.sp,
+                                                    color = Color(0xFF0F172A)
+                                                )
+                                                Text(
+                                                    "Level ${player.level} • Ready to duel",
+                                                    fontSize = 11.sp,
+                                                    color = Color(0xFF64748B)
+                                                )
+                                            }
+                                        }
+
+                                        Button(
+                                            onClick = {
+                                                onSendCustomChallenge(player.name, player.level)
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB300)),
+                                            shape = RoundedCornerShape(10.dp),
+                                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                            modifier = Modifier.height(34.dp)
+                                        ) {
+                                            Text(
+                                                "CHALLENGE ⚔️",
+                                                fontWeight = FontWeight.Black,
+                                                fontSize = 11.sp,
+                                                color = Color(0xFF1A0033)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // 5. Friends & Level Management (Dost & Levels)
                 Card(
                     shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = theme.cardBgColor),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.People, contentDescription = null, tint = Color(0xFFFF4081))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f, fill = false)
+                            ) {
+                                Icon(Icons.Default.People, contentDescription = null, tint = Color(0xFFE91E63))
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     "Friends & Levels (Dost) 👥",
                                     fontWeight = FontWeight.Black,
-                                    fontSize = 15.sp,
-                                    color = theme.textPrimary
+                                    fontSize = 16.sp,
+                                    color = Color(0xFF0F172A)
                                 )
                             }
 
-                            OutlinedButton(
+                            Button(
                                 onClick = { showAddFriendDialog = true },
-                                shape = RoundedCornerShape(10.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF4081))
+                                shape = RoundedCornerShape(20.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE91E63)),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                modifier = Modifier.height(36.dp)
                             ) {
-                                Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Add Friend", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text("Add Friend", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             }
                         }
 
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             state.friendsList.forEach { friend ->
                                 Card(
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.08f)),
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Row(
-                                        modifier = Modifier.padding(10.dp),
+                                        modifier = Modifier.padding(12.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
@@ -709,79 +1078,86 @@ Hey! I've created a BINGO duel for you!
                                         ) {
                                             Box(
                                                 modifier = Modifier
-                                                    .size(36.dp)
+                                                    .size(40.dp)
                                                     .clip(CircleShape)
-                                                    .background(Color.White.copy(alpha = 0.15f)),
+                                                    .background(Color(0xFFEDE9FE)),
                                                 contentAlignment = Alignment.Center
                                             ) {
-                                                Text(text = friend.avatarEmoji, fontSize = 20.sp)
+                                                Text(text = friend.avatarEmoji, fontSize = 22.sp)
                                             }
-                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Spacer(modifier = Modifier.width(10.dp))
                                             Column {
                                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                                     Text(
                                                         friend.name,
                                                         fontWeight = FontWeight.Black,
                                                         fontSize = 14.sp,
-                                                        color = Color.White
+                                                        color = Color(0xFF0F172A)
                                                     )
                                                     Spacer(modifier = Modifier.width(6.dp))
                                                     Box(
                                                         modifier = Modifier
-                                                            .size(7.dp)
+                                                            .size(8.dp)
                                                             .clip(CircleShape)
-                                                            .background(if (friend.isOnline) Color(0xFF00E676) else Color.Gray)
+                                                            .background(if (friend.isOnline) Color(0xFF16A34A) else Color(0xFF94A3B8))
                                                     )
                                                     Spacer(modifier = Modifier.width(4.dp))
                                                     Text(
                                                         if (friend.isOnline) "Online" else "Offline",
                                                         fontSize = 10.sp,
-                                                        color = if (friend.isOnline) Color(0xFF00E676) else Color.Gray,
+                                                        color = if (friend.isOnline) Color(0xFF16A34A) else Color(0xFF64748B),
                                                         fontWeight = FontWeight.Bold
                                                     )
                                                 }
-                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    Text(
-                                                        "Lvl ${friend.level} • ${friend.statsDesc}",
-                                                        fontSize = 11.sp,
-                                                        color = Color.White.copy(alpha = 0.7f)
-                                                    )
-                                                }
+                                                Text(
+                                                    "Lvl ${friend.level} • ${friend.statsDesc}",
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = Color(0xFF475569)
+                                                )
                                             }
                                         }
 
                                         Row(
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            // Quick Level Up/Down buttons
-                                            IconButton(
-                                                onClick = {
-                                                    val newLvl = if (friend.level >= 5) 1 else friend.level + 1
-                                                    onUpdateFriendLevel(friend.name, newLvl)
-                                                },
-                                                modifier = Modifier.size(32.dp)
+                                            // Quick Level Up/Down button
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(34.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color(0xFFFEF3C7))
+                                                    .clickable {
+                                                        val newLvl = if (friend.level >= 5) 1 else friend.level + 1
+                                                        onUpdateFriendLevel(friend.name, newLvl)
+                                                    },
+                                                contentAlignment = Alignment.Center
                                             ) {
                                                 Icon(
                                                     Icons.Default.Star,
                                                     contentDescription = "Change Level",
-                                                    tint = Color(0xFFFFD700),
+                                                    tint = Color(0xFFD97706),
                                                     modifier = Modifier.size(18.dp)
                                                 )
                                             }
 
                                             // Direct WhatsApp challenge to this friend
-                                            IconButton(
-                                                onClick = {
-                                                    shareChallengeViaWhatsApp(state.roomCode, friend.level, friend.name)
-                                                },
-                                                modifier = Modifier.size(32.dp)
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(34.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color(0xFFDCFCE7))
+                                                    .clickable {
+                                                        shareChallengeViaWhatsApp(state.roomCode, friend.level, friend.name)
+                                                    },
+                                                contentAlignment = Alignment.Center
                                             ) {
                                                 Icon(
                                                     Icons.Default.Send,
                                                     contentDescription = "WhatsApp",
-                                                    tint = Color(0xFF25D366),
-                                                    modifier = Modifier.size(18.dp)
+                                                    tint = Color(0xFF16A34A),
+                                                    modifier = Modifier.size(16.dp)
                                                 )
                                             }
 
@@ -791,21 +1167,19 @@ Hey! I've created a BINGO duel for you!
                                                     refreshNetwork()
                                                     if (!isOnlineConnected) {
                                                         Toast.makeText(context, "Please connect to Wi-Fi or Mobile Network first!", Toast.LENGTH_SHORT).show()
-                                                    } else if (!friend.isOnline) {
-                                                        Toast.makeText(context, "${friend.name} is Offline. Sending WhatsApp challenge link!", Toast.LENGTH_SHORT).show()
-                                                        shareChallengeViaWhatsApp(state.roomCode, friend.level, friend.name)
                                                     } else {
-                                                        selectedFriendForChallenge = friend
+                                                        onChallengeFriend(friend)
                                                     }
                                                 },
                                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB300)),
-                                                shape = RoundedCornerShape(8.dp),
+                                                shape = RoundedCornerShape(10.dp),
+                                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp),
                                                 modifier = Modifier.height(34.dp)
                                             ) {
                                                 Text(
-                                                    "DUEL 🎯",
+                                                    "DUEL ⚔️",
                                                     fontWeight = FontWeight.Black,
-                                                    fontSize = 11.sp,
+                                                    fontSize = 12.sp,
                                                     color = Color(0xFF1A0033)
                                                 )
                                             }
@@ -906,86 +1280,387 @@ Hey! I've created a BINGO duel for you!
         )
     }
 
-    // Live Online Challenge Notification Modal (Simulates challenge appearing on friend's device)
-    if (selectedFriendForChallenge != null) {
-        val targetFriend = selectedFriendForChallenge!!
-        var challengeStep by remember { mutableIntStateOf(1) } // 1: Alert ringing on friend's phone, 2: Friend accepted!
-
-        androidx.compose.runtime.LaunchedEffect(targetFriend) {
-            challengeStep = 1
-            kotlinx.coroutines.delay(1800)
-            challengeStep = 2
-        }
+    // Real-Time Outgoing Challenge Modal (Displays Pending, Accepted, or Rejected in Gaming Language)
+    if (outgoingChallenge != null) {
+        val isPending = outgoingChallenge.status == ChallengeStatus.PENDING
+        val isAccepted = outgoingChallenge.status == ChallengeStatus.ACCEPTED
+        val isRejected = outgoingChallenge.status == ChallengeStatus.REJECTED
 
         AlertDialog(
-            onDismissRequest = { selectedFriendForChallenge = null },
+            onDismissRequest = {
+                if (!isPending) {
+                    onCancelOutgoingChallenge()
+                }
+            },
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = targetFriend.avatarEmoji, fontSize = 24.sp)
+                    Text(
+                        when {
+                            isAccepted -> "⚡"
+                            isRejected -> "🛡️"
+                            else -> "⚔️"
+                        },
+                        fontSize = 24.sp
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (challengeStep == 1) "Sending Challenge Alert..." else "Challenge Accepted! 🎉",
+                        text = when {
+                            isAccepted -> "DUEL COMMENCED! ⚡"
+                            isRejected -> "CHALLENGE DECLINED 🛡️"
+                            else -> "CHALLENGE TRANSMITTED ⚔️"
+                        },
                         fontWeight = FontWeight.Black,
                         fontSize = 17.sp,
-                        color = Color(0xFF0D47A1)
+                        color = when {
+                            isAccepted -> Color(0xFF00C853)
+                            isRejected -> Color(0xFFD50000)
+                            else -> Color(0xFF6200EA)
+                        }
                     )
                 }
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    if (challengeStep == 1) {
-                        Text(
-                            text = "📲 Live Mind Bingo challenge sent to ${targetFriend.name}'s phone!",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF1E293B)
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Card(
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = when {
+                                isAccepted -> Color(0xFFE8F5E9)
+                                isRejected -> Color(0xFFFFEBEE)
+                                else -> Color(0xFFEDE7F6)
+                            }
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = "Opponent: ${outgoingChallenge.receiverName}",
+                                fontWeight = FontWeight.Black,
+                                fontSize = 15.sp,
+                                color = Color(0xFF1E293B)
+                            )
+                            Text(
+                                text = "Room Code: #${outgoingChallenge.roomCode}",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF475569)
+                            )
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            Text(
+                                text = when {
+                                    isAccepted -> "⚡ STATUS: ACCEPTED!"
+                                    isRejected -> "🛡️ STATUS: DECLINED (Retreated)"
+                                    else -> "⏳ STATUS: PENDING (Awaiting Opponent...)"
+                                },
+                                fontWeight = FontWeight.Black,
+                                fontSize = 13.sp,
+                                color = when {
+                                    isAccepted -> Color(0xFF2E7D32)
+                                    isRejected -> Color(0xFFC62828)
+                                    else -> Color(0xFF512DA8)
+                                }
+                            )
+
+                            if (isPending) {
+                                LinearProgressIndicator(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(5.dp)
+                                        .clip(RoundedCornerShape(3.dp)),
+                                    color = Color(0xFF6200EA)
+                                )
+                                Text(
+                                    text = "📲 Live duel request sent to ${outgoingChallenge.receiverName}'s phone! Jaise hi woh Accept karenge, aap dono ka match automatically shuru ho jayega.",
+                                    fontSize = 11.sp,
+                                    textAlign = TextAlign.Center,
+                                    color = Color(0xFF475569)
+                                )
+                            } else if (isAccepted) {
+                                Text(
+                                    text = "🎉 ${outgoingChallenge.receiverName} ne challenge ACCEPT kar liya! Boards sync ho chuke hain. Game arena me enter karein!",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center,
+                                    color = Color(0xFF2E7D32)
+                                )
+                            } else if (isRejected) {
+                                Text(
+                                    text = "🛡️ ${outgoingChallenge.receiverName} ne challenge DECLINE kar diya. Aap kisi aur dost ko challenge kar sakte hain ya Quick Match try karein!",
+                                    fontSize = 12.sp,
+                                    textAlign = TextAlign.Center,
+                                    color = Color(0xFFC62828)
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                if (isAccepted) {
+                    Button(
+                        onClick = {
+                            onCancelOutgoingChallenge()
+                            onProceedToSetup()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853)),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("ENTER DUEL ARENA 🎯", color = Color.White, fontWeight = FontWeight.Black)
+                    }
+                } else if (isRejected) {
+                    Button(
+                        onClick = { onCancelOutgoingChallenge() },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF455A64)),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Dismiss")
+                    }
+                }
+            },
+            dismissButton = {
+                if (isPending) {
+                    OutlinedButton(
+                        onClick = { onCancelOutgoingChallenge() },
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Cancel Challenge ❌", color = Color(0xFFC62828))
+                    }
+                }
+            }
+        )
+    }
+
+    // Custom Challenge Dialog (Challenge Any Player or Friend by Name / User ID)
+    if (showCustomChallengeDialog) {
+        AlertDialog(
+            onDismissRequest = { showCustomChallengeDialog = false },
+            title = {
+                Text("Send Duel Challenge ⚔️", fontWeight = FontWeight.Black)
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = customTargetName,
+                        onValueChange = { customTargetName = it },
+                        label = { Text("Friend's Username or ID") },
+                        placeholder = { Text("e.g. Samar_Mind") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Text("Challenge Level (Skill):", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        for (lvl in 1..5) {
+                            val selected = customTargetLevel == lvl
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (selected) Color(0xFFFFB300) else Color(0xFFECEFF1))
+                                    .clickable { customTargetLevel = lvl }
+                                    .padding(vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    "Lvl $lvl",
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 12.sp,
+                                    color = if (selected) Color(0xFF1A0033) else Color(0xFF455A64)
+                                )
+                            }
+                        }
+                    }
+
+                    Text(
+                        "Challenge send karne par samne wale player ko 'Incoming Challenge' alert dikhega jisme woh Accept ya Reject kar sakte hain.",
+                        fontSize = 11.sp,
+                        color = Color(0xFF64748B)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (customTargetName.isNotBlank()) {
+                            onSendCustomChallenge(customTargetName.trim(), customTargetLevel)
+                            customTargetName = ""
+                            customTargetLevel = 1
+                            showCustomChallengeDialog = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB300))
+                ) {
+                    Text("SEND CHALLENGE ⚔️", color = Color(0xFF1A0033), fontWeight = FontWeight.Black)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showCustomChallengeDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // In-App Share Room Code Dialog (Prevents Quick Share Bluetooth hang)
+    if (showShareDialog) {
+        var isCopied by remember { mutableStateOf(false) }
+
+        AlertDialog(
+            onDismissRequest = { showShareDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("🔑", fontSize = 24.sp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Share Room Code #${state.roomCode}",
+                        fontWeight = FontWeight.Black,
+                        fontSize = 17.sp,
+                        color = Color(0xFF0F172A)
+                    )
+                }
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // Big Room Code display
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFF0F172A))
+                            .padding(14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                "YOUR 6-DIGIT ROOM CODE",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF94A3B8)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                "#${state.roomCode}",
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color(0xFFFFD700)
+                            )
+                        }
+                    }
+
+                    // Notice Card explaining No Bluetooth / No Quick Share needed
+                    Card(
+                        shape = RoundedCornerShape(10.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFBFDBFE)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Info,
+                                contentDescription = null,
+                                tint = Color(0xFF2563EB),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "Bluetooth ya Quick Share ki zaroorat nahi hai. Apne dost ko yeh 6-digit code bataiye, woh 'Join with Friend's Code' me enter karke jud jayenge!",
+                                fontSize = 11.sp,
+                                color = Color(0xFF1E40AF),
+                                lineHeight = 15.sp
+                            )
+                        }
+                    }
+
+                    // 1-Tap Copy Button
+                    Button(
+                        onClick = {
+                            copyRoomCodeOnly(state.roomCode)
+                            isCopied = true
+                        },
+                        modifier = Modifier.fillMaxWidth().height(46.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isCopied) Color(0xFF16A34A) else Color(0xFF1E293B)
+                        ),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(
+                            if (isCopied) Icons.Default.Check else Icons.Default.ContentCopy,
+                            contentDescription = null,
+                            tint = Color.White
                         )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "🟢 ${targetFriend.name} is ONLINE. Notification is ringing on their device screen right now!",
-                            fontSize = 12.sp,
-                            color = Color(0xFF00C853),
-                            fontWeight = FontWeight.Medium
-                        )
-                        LinearProgressIndicator(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(5.dp)
-                                .clip(RoundedCornerShape(3.dp)),
-                            color = Color(0xFFFFB300)
-                        )
-                    } else {
-                        Text(
-                            text = "✅ ${targetFriend.name} received the alert and tapped ACCEPT!",
-                            fontSize = 13.sp,
+                            if (isCopied) "COPIED TO CLIPBOARD! ✅" else "COPY CODE TO CLIPBOARD 📋",
                             fontWeight = FontWeight.Black,
-                            color = Color(0xFF00C853)
+                            fontSize = 13.sp,
+                            color = Color.White
                         )
-                        Text(
-                            text = "You and ${targetFriend.name} will now fill your 1-25 boards at the same time in 30 seconds! Match starts right after.",
-                            fontSize = 12.sp,
-                            color = Color(0xFF475569)
-                        )
+                    }
+
+                    // WhatsApp Direct
+                    Button(
+                        onClick = {
+                            shareChallengeViaWhatsApp(state.roomCode, state.challengeLevel)
+                            showShareDialog = false
+                        },
+                        modifier = Modifier.fillMaxWidth().height(44.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(Icons.Default.Send, contentDescription = null, tint = Color.White)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Send on WhatsApp 📲", fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+
+                    // SMS Direct
+                    OutlinedButton(
+                        onClick = {
+                            shareChallengeViaSms(state.roomCode, state.challengeLevel)
+                            showShareDialog = false
+                        },
+                        modifier = Modifier.fillMaxWidth().height(44.dp),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(Icons.Default.Sms, contentDescription = null, tint = Color(0xFF0288D1))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Send via SMS / Message 💬", fontWeight = FontWeight.Bold, color = Color(0xFF0288D1))
                     }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        val f = targetFriend
-                        selectedFriendForChallenge = null
-                        onChallengeFriend(f)
+                        showShareDialog = false
                         onProceedToSetup()
                     },
-                    enabled = challengeStep == 2,
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB300)),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("START 30s BOARD SETUP 🎯", color = Color(0xFF1A0033), fontWeight = FontWeight.Black)
+                    Text("START BOARD SETUP NOW 🎯", color = Color(0xFF1A0033), fontWeight = FontWeight.Black)
                 }
             },
             dismissButton = {
-                OutlinedButton(onClick = { selectedFriendForChallenge = null }) {
-                    Text("Cancel")
+                OutlinedButton(onClick = { showShareDialog = false }) {
+                    Text("Close ✕")
                 }
             }
         )

@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Group
@@ -41,11 +42,15 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import android.app.Activity
+import androidx.compose.material3.CircularProgressIndicator
+import com.example.auth.AuthState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -79,8 +84,15 @@ import com.example.util.NetworkUtils
 fun HomeScreen(
     stats: UserStats,
     activeTheme: BingoTheme,
+    authState: AuthState = AuthState.Idle,
+    isFirebaseConfigured: Boolean = false,
     onToggleSound: () -> Unit = {},
     onUpdateProfile: (name: String, provider: String, avatar: String) -> Unit = { _, _, _ -> },
+    onSignInWithGoogle: (Activity) -> Unit = {},
+    onSignInWithFacebook: (Activity) -> Unit = {},
+    onSignInAsGuest: (String?) -> Unit = {},
+    onSignOut: () -> Unit = {},
+    onResetAuthState: () -> Unit = {},
     onStartClassicGame: (GameMode) -> Unit,
     onStartGame: (cardCount: Int, difficulty: GameDifficulty) -> Unit,
     onNavigateSpinWheel: () -> Unit,
@@ -371,12 +383,8 @@ fun HomeScreen(
                     )
                 }
             }
+            Spacer(modifier = Modifier.height(16.dp))
         }
-
-        // Bottom Ad Banner
-        BingoBannerAd(
-            modifier = Modifier.align(Alignment.BottomCenter)
-        )
     }
 
     // Game Mode Selection Modal Dialog
@@ -401,30 +409,41 @@ fun HomeScreen(
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
-                        .padding(12.dp)
+                        .padding(14.dp)
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text(
-                        text = "CHOOSE HOW TO PLAY 🎈",
-                        color = Color(0xFF0D47A1),
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Black
-                    )
-
-                    Text(
-                        text = "Fill numbers 1 to 25 • Complete 5 Lines = BINGO!",
-                        color = Color(0xFF455A64),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "CHOOSE HOW TO PLAY 🎈",
+                                color = Color(0xFF0D47A1),
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Black
+                            )
+                            Text(
+                                text = "Fill 1-25 boxes • 5 Lines = BINGO!",
+                                color = Color(0xFF64748B),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        IconButton(onClick = { showGameSetupDialog = false }) {
+                            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color(0xFF64748B))
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(2.dp))
 
-                    // Option 1: Play with Computer (Offline)
+                    // Mode 1: Play with Computer (Offline Solo)
                     GameModeSelectCard(
-                        title = "Play with Computer 🤖",
-                        subtitle = "Friendly robot opponent • 25 boxes • Offline",
+                        title = "Play vs Computer 🤖",
+                        subtitle = "Solo Offline Duel • Smart AI • 25 boxes",
+                        badge = "OFFLINE SOLO",
                         icon = Icons.Default.Computer,
                         accentColor = Color(0xFF0288D1),
                         onClick = {
@@ -433,10 +452,11 @@ fun HomeScreen(
                         }
                     )
 
-                    // Option 2: Play with Friends (Offline Pass & Play)
+                    // Mode 2: Friends Pass & Play (Offline 2-Player on 1 Device)
                     GameModeSelectCard(
-                        title = "Friends: Pass & Play (Offline) 👥",
-                        subtitle = "Play on same phone with friend • 2 Players",
+                        title = "Pass & Play (Dost) 👥",
+                        subtitle = "Play on same phone • Player 1 vs Player 2",
+                        badge = "2 PLAYERS",
                         icon = Icons.Default.Group,
                         accentColor = Color(0xFFEC407A),
                         onClick = {
@@ -445,10 +465,11 @@ fun HomeScreen(
                         }
                     )
 
-                    // Option 3: Play with Friends Online
+                    // Mode 3: Online Multiplayer (Quick Match & Friend Challenges)
                     GameModeSelectCard(
-                        title = "Friends: Online Challenge 🌐",
-                        subtitle = "Invite friends, timed duel & room code • Internet",
+                        title = "Online Multiplayer 🌐",
+                        subtitle = "Instant Quick Match (5-10s) • Room Codes & Live Friend Duels",
+                        badge = "LIVE PVP ⚡",
                         icon = Icons.Default.Public,
                         accentColor = Color(0xFFFF8F00),
                         onClick = {
@@ -461,65 +482,59 @@ fun HomeScreen(
                         }
                     )
 
-                    // Option 4: Direct Quick Match Online
-                    GameModeSelectCard(
-                        title = "Quick Match (Direct Online) ⚡",
-                        subtitle = "Instant match in 5-10s with online players • Direct play",
-                        icon = Icons.Default.Bolt,
-                        accentColor = Color(0xFF7B1FA2),
-                        onClick = {
-                            if (!NetworkUtils.isNetworkAvailable(context)) {
-                                showNoInternetDialog = true
-                            } else {
-                                showGameSetupDialog = false
-                                onStartClassicGame(GameMode.PLAY_ONLINE)
-                            }
-                        }
-                    )
+                    Spacer(modifier = Modifier.height(4.dp))
 
-                    Spacer(modifier = Modifier.height(2.dp))
-
-                    // Account Profile Quick Bar
-                    Row(
+                    // Account Profile Quick Bar - Sleek & High-Contrast
+                    Card(
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F5F9)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFCBD5E1)),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFFE8EAF6))
                             .clickable {
                                 showGameSetupDialog = false
                                 showProfileDialog = true
                             }
-                            .padding(horizontal = 10.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(text = stats.userAvatar, fontSize = 16.sp)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "${stats.userName} (${stats.loginProvider})",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF1A237E)
-                            )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(text = stats.userAvatar, fontSize = 22.sp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text(
+                                        text = stats.userName,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = Color(0xFF0F172A)
+                                    )
+                                    Text(
+                                        text = "Logged in via ${stats.loginProvider}",
+                                        fontSize = 10.sp,
+                                        color = Color(0xFF64748B),
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xFF0288D1).copy(alpha = 0.12f))
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "Edit Profile 👤",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF0288D1)
+                                )
+                            }
                         }
-                        Text(
-                            text = "Switch Account 👤",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Black,
-                            color = Color(0xFF0288D1)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(2.dp))
-
-                    Button(
-                        onClick = { showGameSetupDialog = false },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFECEFF1)),
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Close", color = Color(0xFF455A64), fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -738,9 +753,122 @@ fun HomeScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
+                    // Firebase & Auth Status Banner
+                    if (!isFirebaseConfigured) {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8E1)),
+                            shape = RoundedCornerShape(12.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFFB300)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Text(
+                                    text = "⚡ Firebase Setup Ready",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    color = Color(0xFFE65100)
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "Waiting for your google-services.json. Guest mode is fully playable right now! Cloud Google & Facebook login will activate as soon as config is provided.",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF5D4037)
+                                )
+                            }
+                        }
+                    } else {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
+                            shape = RoundedCornerShape(12.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF81C784)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "🟢 Firebase Cloud Services Connected",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp,
+                                color = Color(0xFF2E7D32),
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                            )
+                        }
+                    }
+
+                    // Auth State feedback (Loading, Error, Success)
+                    when (authState) {
+                        is AuthState.Loading -> {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = Color(0xFF1976D2),
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Authenticating with secure provider...",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color(0xFF1976D2)
+                                )
+                            }
+                        }
+                        is AuthState.Error -> {
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "⚠️ ${authState.message}",
+                                        fontSize = 11.sp,
+                                        color = Color(0xFFC62828),
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    IconButton(
+                                        onClick = onResetAuthState,
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Filled.Close,
+                                            contentDescription = "Dismiss",
+                                            tint = Color(0xFFC62828),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        is AuthState.Success -> {
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = "✅ ${authState.message}",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF2E7D32),
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(8.dp)
+                                )
+                            }
+                        }
+                        else -> {}
+                    }
+
                     // Social Sign-In Buttons
                     Text(
-                        text = "Sign In / Link Your Account:",
+                        text = if (stats.loginProvider != "GUEST") "Connected Account Options:" else "Sign In / Link Your Account:",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF37474F),
@@ -750,10 +878,19 @@ fun HomeScreen(
                     // 1. Google Sign-In Button
                     Button(
                         onClick = {
-                            val newName = if (editNameInput.startsWith("MindPlayer")) "Google_Gamer" else editNameInput
-                            onUpdateProfile(newName, "GOOGLE", selectedAvatar)
-                            Toast.makeText(context, "Signed in with Google! Account linked.", Toast.LENGTH_SHORT).show()
-                            showProfileDialog = false
+                            val activity = context as? Activity
+                            if (isFirebaseConfigured && activity != null) {
+                                onSignInWithGoogle(activity)
+                            } else {
+                                val newName = if (editNameInput.startsWith("MindPlayer")) "Google_Gamer" else editNameInput
+                                onUpdateProfile(newName, "GOOGLE", selectedAvatar)
+                                Toast.makeText(
+                                    context,
+                                    "Google profile chosen! (Will sync to Firebase once google-services.json is added)",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                showProfileDialog = false
+                            }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4285F4)),
                         shape = RoundedCornerShape(12.dp),
@@ -763,16 +900,29 @@ fun HomeScreen(
                     ) {
                         Text("G", fontSize = 18.sp, fontWeight = FontWeight.Black, color = Color.White)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Continue with Google", fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(
+                            text = if (stats.loginProvider == "GOOGLE") "Switch Google Account" else "Continue with Google",
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
                     }
 
                     // 2. Facebook Sign-In Button
                     Button(
                         onClick = {
-                            val newName = if (editNameInput.startsWith("MindPlayer")) "FB_Challenger" else editNameInput
-                            onUpdateProfile(newName, "FACEBOOK", selectedAvatar)
-                            Toast.makeText(context, "Signed in with Facebook! Account linked.", Toast.LENGTH_SHORT).show()
-                            showProfileDialog = false
+                            val activity = context as? Activity
+                            if (isFirebaseConfigured && activity != null) {
+                                onSignInWithFacebook(activity)
+                            } else {
+                                val newName = if (editNameInput.startsWith("MindPlayer")) "FB_Challenger" else editNameInput
+                                onUpdateProfile(newName, "FACEBOOK", selectedAvatar)
+                                Toast.makeText(
+                                    context,
+                                    "Facebook profile chosen! (Will sync to Firebase once config is added)",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                showProfileDialog = false
+                            }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1877F2)),
                         shape = RoundedCornerShape(12.dp),
@@ -782,23 +932,43 @@ fun HomeScreen(
                     ) {
                         Text("f", fontSize = 20.sp, fontWeight = FontWeight.Black, color = Color.White)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Continue with Facebook", fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(
+                            text = if (stats.loginProvider == "FACEBOOK") "Switch Facebook Account" else "Continue with Facebook",
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
                     }
 
-                    // 3. Play Direct (Guest Mode)
-                    OutlinedButton(
-                        onClick = {
-                            onUpdateProfile(editNameInput.ifBlank { "Guest_${(100..999).random()}" }, "GUEST", selectedAvatar)
-                            Toast.makeText(context, "Playing as Guest. No account required!", Toast.LENGTH_SHORT).show()
-                            showProfileDialog = false
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF455A64)),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(46.dp)
-                    ) {
-                        Text("Play Direct as Guest (No Login)", fontWeight = FontWeight.Bold)
+                    // 3. Play Direct (Guest Mode) or Sign Out
+                    if (stats.loginProvider != "GUEST") {
+                        OutlinedButton(
+                            onClick = {
+                                onSignOut()
+                                Toast.makeText(context, "Signed out. Switched to Guest mode.", Toast.LENGTH_SHORT).show()
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFD32F2F)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(46.dp)
+                        ) {
+                            Text("Sign Out (Return to Guest)", fontWeight = FontWeight.Bold)
+                        }
+                    } else {
+                        OutlinedButton(
+                            onClick = {
+                                onSignInAsGuest(editNameInput.ifBlank { null })
+                                Toast.makeText(context, "Playing as Guest. No account required!", Toast.LENGTH_SHORT).show()
+                                showProfileDialog = false
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF455A64)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(46.dp)
+                        ) {
+                            Text("Play Direct as Guest (No Login)", fontWeight = FontWeight.Bold)
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(2.dp))
@@ -825,16 +995,18 @@ fun HomeScreen(
 private fun GameModeSelectCard(
     title: String,
     subtitle: String,
+    badge: String = "",
     icon: ImageVector,
     accentColor: Color,
     onClick: () -> Unit
 ) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F9FF)),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
         shape = RoundedCornerShape(18.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.5.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(18.dp))
+            .border(1.5.dp, accentColor.copy(alpha = 0.45f), RoundedCornerShape(18.dp))
             .clickable { onClick() }
     ) {
         Row(
@@ -845,7 +1017,7 @@ private fun GameModeSelectCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(46.dp)
                     .clip(CircleShape)
                     .background(accentColor.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
@@ -861,17 +1033,38 @@ private fun GameModeSelectCard(
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    color = Color(0xFF1A237E),
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Black,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = title,
+                        color = Color(0xFF0F172A),
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Black,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (badge.isNotEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(accentColor.copy(alpha = 0.15f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = badge,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = accentColor
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = subtitle,
-                    color = Color(0xFF546E7A),
+                    color = Color(0xFF475569),
                     fontSize = 12.sp,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis

@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -60,6 +61,10 @@ fun BingoGameScreen(
     onReplayGame: () -> Unit,
     onBackToHome: () -> Unit
 ) {
+    BackHandler {
+        onBackToHome()
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()

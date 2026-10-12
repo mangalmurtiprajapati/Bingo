@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
@@ -92,6 +93,10 @@ fun ClassicBingoGameScreen(
     onBackToHome: () -> Unit
 ) {
     var showVerificationDialog by remember { mutableStateOf(false) }
+
+    BackHandler {
+        onBackToHome()
+    }
 
     val isFriendMode = state.gameMode == GameMode.PLAY_WITH_FRIEND
     val viewingBoard = if (isFriendMode && state.viewingBoardPlayer == 2) {
@@ -431,189 +436,74 @@ fun ClassicBingoGameScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                // 5. Live Emoji & Reaction Dock (Compact & sleek for friend / multiplayer)
+                if (state.gameMode != GameMode.VS_COMPUTER) {
+                    var showQuickChatList by remember { mutableStateOf(false) }
 
-                // 5. In-Match Live Emoji & Quick Chat Reaction Dock
-                var showQuickChatList by remember { mutableStateOf(false) }
-
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A).copy(alpha = 0.85f)),
-                    border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFFFFD700).copy(alpha = 0.4f)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    Card(
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A).copy(alpha = 0.9f)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFFD700).copy(alpha = 0.4f)),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        // Header: Opponent online status & latency
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "${state.opponentAvatar} $opponentTitle",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = Color.White
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFF00E676))
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = if (state.gameMode == GameMode.PLAY_ONLINE) "Online • 28ms" else "Ready",
-                                    fontSize = 10.sp,
-                                    color = Color(0xFF00E676),
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-
+                            // Reaction Row with 5 Quick Emojis + Chat Toggle
                             Row(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .clickable { showQuickChatList = !showQuickChatList }
-                                    .background(Color(0xFF1E293B))
-                                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = if (showQuickChatList) "Hide Chat ▲" else "💬 Quick Chat ▼",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFFFFD700)
-                                )
-                            }
-                        }
-
-                        // Live Reaction Feed (Shows recent reactions from user and friend)
-                        if (reactions.isNotEmpty()) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(Color.Black.copy(alpha = 0.35f))
-                                    .padding(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                reactions.takeLast(3).forEach { r ->
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = if (r.isUser) Arrangement.End else Arrangement.Start,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(12.dp))
-                                                .background(
-                                                    if (r.isUser) Color(0xFF0288D1).copy(alpha = 0.85f)
-                                                    else Color(0xFFC2185B).copy(alpha = 0.85f)
-                                                )
-                                                .border(
-                                                    1.dp,
-                                                    if (r.isUser) Color(0xFF81D4FA) else Color(0xFFFF80AB),
-                                                    RoundedCornerShape(12.dp)
-                                                )
-                                                .padding(horizontal = 10.dp, vertical = 5.dp)
-                                        ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Text(
-                                                    text = if (r.isUser) "You: " else "${r.senderAvatar} ${r.senderName}: ",
-                                                    fontSize = 11.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = Color(0xFFFFD700)
-                                                )
-                                                Spacer(modifier = Modifier.width(4.dp))
-                                                Text(
-                                                    text = r.content,
-                                                    fontSize = 13.sp,
-                                                    fontWeight = FontWeight.Black,
-                                                    color = Color.White
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // Emoji Reaction Buttons Row
-                        val emojis = listOf("🔥", "😂", "👏", "🎯", "😱", "😎", "🥳", "🍀")
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            items(emojis) { emoji ->
-                                Box(
-                                    modifier = Modifier
-                                        .size(38.dp)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(Color(0xFF1E293B))
-                                        .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
-                                    .clickable {
-                                        onSendReaction(emoji)
-                                    },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(text = emoji, fontSize = 18.sp)
-                                }
-                            }
-                        }
-
-                        // Quick Chat Pills List (Toggled)
-                        AnimatedVisibility(visible = showQuickChatList) {
-                            Column(
                                 modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                val quickChats = listOf(
-                                    "Good luck! 🍀",
-                                    "Nice cut! 👏",
-                                    "Almost got BINGO! 😱",
-                                    "Watch this! 😎",
-                                    "GG (Good Game) 🤝",
-                                    "Rematch? 🔥"
-                                )
                                 Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    quickChats.take(3).forEach { phrase ->
+                                    val quickEmojis = listOf("🔥", "😂", "👏", "🎯", "😎")
+                                    quickEmojis.forEach { emoji ->
                                         Box(
                                             modifier = Modifier
-                                                .weight(1f)
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(Color(0xFF334155))
-                                                .clickable {
-                                                    onSendReaction(phrase)
-                                                    showQuickChatList = false
-                                                }
-                                                .padding(vertical = 6.dp, horizontal = 4.dp),
+                                                .size(36.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(0xFF1E293B))
+                                                .clickable { onSendReaction(emoji) },
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            Text(
-                                                text = phrase,
-                                                fontSize = 10.sp,
-                                                color = Color.White,
-                                                fontWeight = FontWeight.Bold,
-                                                maxLines = 1
-                                            )
+                                            Text(text = emoji, fontSize = 18.sp)
                                         }
                                     }
                                 }
+
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(if (showQuickChatList) Color(0xFFFFD700) else Color(0xFF1E293B))
+                                        .clickable { showQuickChatList = !showQuickChatList }
+                                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = if (showQuickChatList) "Close ✕" else "Chat 💬",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = if (showQuickChatList) Color(0xFF0F172A) else Color(0xFFFFD700)
+                                    )
+                                }
+                            }
+
+                            // Expandable Quick Chat Pills
+                            AnimatedVisibility(visible = showQuickChatList) {
                                 Row(
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 4.dp),
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
-                                    quickChats.drop(3).forEach { phrase ->
+                                    val quickChats = listOf("Nice! 👏", "GG 🤝", "Rematch? 🔥", "Lucky! 🍀")
+                                    quickChats.forEach { phrase ->
                                         Box(
                                             modifier = Modifier
                                                 .weight(1f)
@@ -623,7 +513,7 @@ fun ClassicBingoGameScreen(
                                                     onSendReaction(phrase)
                                                     showQuickChatList = false
                                                 }
-                                                .padding(vertical = 6.dp, horizontal = 4.dp),
+                                                .padding(vertical = 6.dp),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Text(

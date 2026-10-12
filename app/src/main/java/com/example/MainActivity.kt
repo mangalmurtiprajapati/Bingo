@@ -65,8 +65,12 @@ fun KidsBingoApp(
     val classicState by viewModel.classicState.collectAsState()
     val liveReactions by viewModel.liveReactions.collectAsState()
     val achievements by viewModel.repository.achievements.collectAsState(initial = emptyList())
+    val onlinePlayers by viewModel.onlinePlayers.collectAsState()
+    val incomingChallenges by viewModel.incomingChallenges.collectAsState()
+    val outgoingChallenge by viewModel.outgoingChallenge.collectAsState()
 
     val activeTheme = BingoTheme.getTheme(stats.selectedThemeId)
+    val authState by viewModel.authState.collectAsState()
 
     LaunchedEffect(stats.isMusicEnabled) {
         if (stats.isMusicEnabled) {
@@ -84,10 +88,17 @@ fun KidsBingoApp(
             HomeScreen(
                 stats = stats,
                 activeTheme = activeTheme,
+                authState = authState,
+                isFirebaseConfigured = viewModel.authManager.isFirebaseConfigured,
                 onToggleSound = { viewModel.toggleSound() },
                 onUpdateProfile = { name, provider, avatar ->
                     viewModel.updateUserProfile(name, provider, avatar)
                 },
+                onSignInWithGoogle = { act -> viewModel.signInWithGoogle(act) },
+                onSignInWithFacebook = { act -> viewModel.signInWithFacebook(act) },
+                onSignInAsGuest = { name -> viewModel.signInAsGuest(name) },
+                onSignOut = { viewModel.signOut() },
+                onResetAuthState = { viewModel.resetAuthState() },
                 onStartClassicGame = { mode ->
                     viewModel.initClassicGame(mode)
                     if (mode == GameMode.PLAY_ONLINE) {
@@ -170,6 +181,11 @@ fun KidsBingoApp(
             OnlineLobbyScreen(
                 state = classicState,
                 theme = activeTheme,
+                currentUserName = stats.userName,
+                currentUserId = classicState.currentUserId,
+                onlinePlayers = onlinePlayers,
+                incomingChallenges = incomingChallenges,
+                outgoingChallenge = outgoingChallenge,
                 onCreateRoom = { viewModel.generateNewOnlineRoom() },
                 onJoinRoom = { code ->
                     viewModel.joinOnlineRoom(code) {
@@ -186,13 +202,43 @@ fun KidsBingoApp(
                 onAddFriend = { name, level -> viewModel.addFriend(name, level) },
                 onUpdateFriendLevel = { name, level -> viewModel.updateFriendLevel(name, level) },
                 onChallengeFriend = { friend ->
-                    viewModel.prepareFriendChallenge(friend)
-                    navController.navigate("classic_setup")
+                    viewModel.sendFriendChallenge(
+                        receiverId = "friend_${friend.name.lowercase().replace(" ", "_")}",
+                        receiverName = friend.name,
+                        receiverLevel = friend.level,
+                        onAcceptedGoToSetup = {
+                            navController.navigate("classic_setup")
+                        }
+                    )
+                },
+                onSendCustomChallenge = { targetName, level ->
+                    viewModel.sendFriendChallenge(
+                        receiverId = "user_${targetName.lowercase().replace(" ", "_")}",
+                        receiverName = targetName,
+                        receiverLevel = level,
+                        onAcceptedGoToSetup = {
+                            navController.navigate("classic_setup")
+                        }
+                    )
+                },
+                onAcceptChallenge = { challenge ->
+                    viewModel.acceptIncomingChallenge(challenge) {
+                        navController.navigate("classic_setup")
+                    }
+                },
+                onRejectChallenge = { challenge ->
+                    viewModel.rejectIncomingChallenge(challenge)
+                },
+                onCancelOutgoingChallenge = {
+                    viewModel.cancelOutgoingChallenge()
                 },
                 onProceedToSetup = {
                     navController.navigate("classic_setup")
                 },
-                onBack = { navController.popBackStack() }
+                onBack = {
+                    viewModel.cancelOnlineSearch()
+                    navController.popBackStack()
+                }
             )
         }
 

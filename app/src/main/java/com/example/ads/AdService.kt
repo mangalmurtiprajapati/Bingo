@@ -4,8 +4,10 @@ import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -75,26 +77,30 @@ fun BingoBannerAd(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(52.dp)
-            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .height(44.dp)
+            .padding(horizontal = 14.dp, vertical = 2.dp)
             .background(
-                color = Color(0xFF1E1035).copy(alpha = 0.85f),
-                shape = RoundedCornerShape(8.dp)
+                color = Color(0xFF0F172A).copy(alpha = 0.9f),
+                shape = RoundedCornerShape(12.dp)
             )
-            .border(1.dp, Color(0xFFDAA520).copy(alpha = 0.5f), RoundedCornerShape(8.dp)),
+            .border(1.dp, Color(0xFFFFD700).copy(alpha = 0.35f), RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
             Text(
-                text = "AdMob Banner (${if (isTestAd) "Test Mode" else "Live"})",
+                text = "💡 MIND TIP: ",
                 color = Color(0xFFFFD700),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Black
             )
             Text(
-                text = "ID: ${AdService.BANNER_AD_UNIT_ID}",
-                color = Color.White.copy(alpha = 0.7f),
-                fontSize = 10.sp
+                text = "Place corners & center wisely to complete 5 lines faster! 🎯",
+                color = Color.White.copy(alpha = 0.9f),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium
             )
         }
     }
