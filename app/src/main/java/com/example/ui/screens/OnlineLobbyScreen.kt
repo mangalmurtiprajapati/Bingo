@@ -58,6 +58,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -268,30 +269,45 @@ Can you beat my brain strategy? Join now! 🎯⚡
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // User Profile & Tag Banner
+                // User Profile & Status Card (Clean, high-contrast, modern)
                 Card(
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.15f)),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("👤", fontSize = 20.sp)
-                            Spacer(modifier = Modifier.width(8.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFE0F2FE)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("👤", fontSize = 22.sp)
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text(
                                     currentUserName,
-                                    color = Color.White,
+                                    color = Color(0xFF0F172A),
                                     fontWeight = FontWeight.Black,
-                                    fontSize = 14.sp
+                                    fontSize = 15.sp,
+                                    maxLines = 1
                                 )
                                 Text(
-                                    "ID: ${currentUserId.take(12).ifEmpty { "guest" }}",
-                                    color = Color(0xFFFFD700),
+                                    "ID: ${currentUserId.take(10).ifEmpty { "guest" }}",
+                                    color = Color(0xFF0288D1),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -299,12 +315,12 @@ Can you beat my brain strategy? Join now! 🎯⚡
                         }
                         Button(
                             onClick = { showCustomChallengeDialog = true },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD700)),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.height(34.dp),
-                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB300)),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.height(38.dp),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                         ) {
-                            Text("CHALLENGE ANYONE ⚔️", fontWeight = FontWeight.Black, fontSize = 11.sp, color = Color(0xFF1A0033))
+                            Text("CHALLENGE ⚔️", fontWeight = FontWeight.Black, fontSize = 11.sp, color = Color(0xFF1A0033))
                         }
                     }
                 }
@@ -369,7 +385,7 @@ Can you beat my brain strategy? Join now! 🎯⚡
                                         color = Color.White
                                     )
                                     Text(
-                                        "Aapko 5x5 Mind Bingo duel ke liye challenge kiya hai! Room #${challenge.roomCode}",
+                                        "Challenged you to a 5x5 Mind Bingo duel! Room #${challenge.roomCode}",
                                         fontSize = 12.sp,
                                         color = Color(0xFFE0E7FF)
                                     )
@@ -402,43 +418,59 @@ Can you beat my brain strategy? Join now! 🎯⚡
                     }
                 }
 
-                // 1. Network / Wi-Fi Connectivity Status Banner
+                // 1. Network / Connectivity Status Bar
                 if (isOnlineConnected) {
                     Card(
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1B5E20)),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF0FDF4)),
+                        border = BorderStroke(1.dp, Color(0xFF86EFAC)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                Icons.Default.Wifi,
-                                contentDescription = "Online",
-                                tint = Color(0xFF69F0AE),
-                                modifier = Modifier.size(22.dp)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFDCFCE7)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.Wifi,
+                                    contentDescription = "Online",
+                                    tint = Color(0xFF16A34A),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                             Spacer(modifier = Modifier.width(10.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    "Connected via $networkTypeName",
-                                    color = Color.White,
+                                    "Connected: $networkTypeName",
+                                    color = Color(0xFF14532D),
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    "Online Matchmaking & Live Rooms Active",
-                                    color = Color(0xFFB9F6CA),
+                                    "Real-Time Matchmaking Ready",
+                                    color = Color(0xFF16A34A),
                                     fontSize = 11.sp
                                 )
                             }
-                            Text(
-                                "ONLINE 🟢",
-                                color = Color(0xFF69F0AE),
-                                fontWeight = FontWeight.Black,
-                                fontSize = 11.sp
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xFF16A34A))
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    "ONLINE",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 10.sp
+                                )
+                            }
                         }
                     }
                 } else {
@@ -468,7 +500,7 @@ Can you beat my brain strategy? Join now! 🎯⚡
                                     fontWeight = FontWeight.Black
                                 )
                                 Text(
-                                    "Online khelne ke liye apna Wi-Fi ya Mobile Data on karein. Tap to re-check.",
+                                    "Please turn on Wi-Fi or Mobile Data to play online. Tap to retry.",
                                     color = Color(0xFFFFCDD2),
                                     fontSize = 11.sp
                                 )
@@ -706,7 +738,7 @@ Can you beat my brain strategy? Join now! 🎯⚡
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Text(
-                                        "Har match ke liye alag aur unique complex room code banayein:",
+                                        "Generate a secure unique room code for your private match:",
                                         fontSize = 12.sp,
                                         color = Color(0xFF94A3B8),
                                         textAlign = TextAlign.Center
@@ -1097,7 +1129,7 @@ Can you beat my brain strategy? Join now! 🎯⚡
                                 Icon(Icons.Default.People, contentDescription = null, tint = Color(0xFFE91E63))
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    "Friends & Levels (Dost) 👥",
+                                    "Friends & Skill Levels 👥",
                                     fontWeight = FontWeight.Black,
                                     fontSize = 16.sp,
                                     color = Color(0xFF0F172A)
@@ -1275,7 +1307,7 @@ Can you beat my brain strategy? Join now! 🎯⚡
         AlertDialog(
             onDismissRequest = { showAddFriendDialog = false },
             title = {
-                Text("Add New Friend (Dost) 👥", fontWeight = FontWeight.Black)
+                Text("Add New Friend 👥", fontWeight = FontWeight.Black)
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1437,14 +1469,14 @@ Can you beat my brain strategy? Join now! 🎯⚡
                                     color = Color(0xFF6200EA)
                                 )
                                 Text(
-                                    text = "📲 Live duel request sent to ${outgoingChallenge.receiverName}'s phone! Jaise hi woh Accept karenge, aap dono ka match automatically shuru ho jayega.",
+                                    text = "📲 Live duel request sent to ${outgoingChallenge.receiverName}! Once accepted, your match will begin automatically.",
                                     fontSize = 11.sp,
                                     textAlign = TextAlign.Center,
                                     color = Color(0xFF475569)
                                 )
                             } else if (isAccepted) {
                                 Text(
-                                    text = "🎉 ${outgoingChallenge.receiverName} ne challenge ACCEPT kar liya! Boards sync ho chuke hain. Game arena me enter karein!",
+                                    text = "🎉 ${outgoingChallenge.receiverName} accepted the challenge! Boards are synced. Enter the duel arena now!",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     textAlign = TextAlign.Center,
@@ -1452,7 +1484,7 @@ Can you beat my brain strategy? Join now! 🎯⚡
                                 )
                             } else if (isRejected) {
                                 Text(
-                                    text = "🛡️ ${outgoingChallenge.receiverName} ne challenge DECLINE kar diya. Aap kisi aur dost ko challenge kar sakte hain ya Quick Match try karein!",
+                                    text = "🛡️ ${outgoingChallenge.receiverName} declined the challenge. You can challenge another friend or try Quick Match!",
                                     fontSize = 12.sp,
                                     textAlign = TextAlign.Center,
                                     color = Color(0xFFC62828)
@@ -1542,7 +1574,7 @@ Can you beat my brain strategy? Join now! 🎯⚡
                     }
 
                     Text(
-                        "Challenge send karne par samne wale player ko 'Incoming Challenge' alert dikhega jisme woh Accept ya Reject kar sakte hain.",
+                        "Sending a challenge will notify the player with an incoming duel alert so they can accept or decline.",
                         fontSize = 11.sp,
                         color = Color(0xFF64748B)
                     )
@@ -1639,12 +1671,12 @@ Can you beat my brain strategy? Join now! 🎯⚡
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                "Bluetooth ya Quick Share ki zaroorat nahi hai. Apne dost ko yeh 6-digit code bataiye, woh 'Join with Friend's Code' me enter karke jud jayenge!",
-                                fontSize = 11.sp,
-                                color = Color(0xFF1E40AF),
-                                lineHeight = 15.sp
-                            )
+                                Text(
+                                    "No Bluetooth or complex setup required. Share this 6-digit code with your friend, and they can join via 'Join with Friend's Code'!",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF1E40AF),
+                                    lineHeight = 15.sp
+                                )
                         }
                     }
 

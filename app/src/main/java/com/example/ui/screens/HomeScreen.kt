@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -222,7 +223,7 @@ fun HomeScreen(
                 }
             }
 
-            // Hero Banner Asset Image
+            // Hero Banner Asset Image (Vibrant 3D Cartoon Bingo Artwork)
             Card(
                 shape = RoundedCornerShape(24.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
@@ -233,8 +234,8 @@ fun HomeScreen(
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     Image(
-                        painter = painterResource(id = R.drawable.mind_bingo_banner),
-                        contentDescription = "1-25 Bingo Mind Game Banner",
+                        painter = painterResource(id = R.drawable.img_bingo_super_banner),
+                        contentDescription = "1-25 Bingo Fun Banner",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -244,7 +245,7 @@ fun HomeScreen(
                             .fillMaxSize()
                             .background(
                                 Brush.verticalGradient(
-                                    listOf(Color.Transparent, Color(0xFF0D47A1).copy(alpha = 0.75f))
+                                    listOf(Color.Transparent, Color(0xFF0F172A).copy(alpha = 0.55f))
                                 )
                             )
                     )
@@ -252,29 +253,29 @@ fun HomeScreen(
                     Row(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
-                            .padding(14.dp),
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Image(
                             painter = painterResource(id = R.drawable.simple_bingo_logo),
-                            contentDescription = "Bingo Mind Game Logo",
+                            contentDescription = "Bingo Logo",
                             modifier = Modifier
-                                .size(48.dp)
+                                .size(40.dp)
                                 .clip(CircleShape)
                                 .border(2.dp, Color(0xFFFFD700), CircleShape)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = "1-25 BINGO MIND GAME 🎯",
+                                text = "1-25 BINGO DUEL 🎯",
                                 color = Color.White,
-                                fontSize = 20.sp,
+                                fontSize = 18.sp,
                                 fontWeight = FontWeight.Black
                             )
                             Text(
-                                text = "Classic 5x5 Number Strategy • Ages 5+",
+                                text = "Classic 5x5 Number Strategy Game",
                                 color = Color(0xFFFFF9C4),
-                                fontSize = 12.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -285,7 +286,7 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // ==========================================
-            // GROUP 1: GAME MODES (KHELNE KE MODES) 🎮
+            // GROUP 1: GAME MODES 🎮
             // ==========================================
             Card(
                 colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.95f)),
@@ -333,7 +334,6 @@ fun HomeScreen(
                         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(68.dp)
                             .shadow(4.dp, RoundedCornerShape(20.dp))
                             .background(
                                 Brush.horizontalGradient(
@@ -345,8 +345,8 @@ fun HomeScreen(
                     ) {
                         Row(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 14.dp),
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
@@ -377,17 +377,18 @@ fun HomeScreen(
                                         color = Color.White
                                     )
                                     Text(
-                                        text = "Solo Offline • Smart AI Bot • 1 vs 1 Duel",
+                                        text = "Solo Offline • Smart AI Bot Duel",
                                         fontSize = 11.sp,
                                         color = Color(0xFFE1F5FE)
                                     )
                                 }
                             }
+                            Spacer(modifier = Modifier.width(8.dp))
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(Color.White.copy(alpha = 0.22f))
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    .padding(horizontal = 8.dp, vertical = 5.dp)
                             ) {
                                 Text(
                                     text = "SOLO 🎮",
@@ -405,7 +406,6 @@ fun HomeScreen(
                         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(68.dp)
                             .shadow(4.dp, RoundedCornerShape(20.dp))
                             .background(
                                 Brush.horizontalGradient(
@@ -423,8 +423,8 @@ fun HomeScreen(
                     ) {
                         Row(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 14.dp),
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
@@ -455,17 +455,18 @@ fun HomeScreen(
                                         color = Color.White
                                     )
                                     Text(
-                                        text = "5s Fast Match • Real Players or Challenger",
+                                        text = "5s Fast Match • Real Players & Bots",
                                         fontSize = 11.sp,
                                         color = Color(0xFFFFF3E0)
                                     )
                                 }
                             }
+                            Spacer(modifier = Modifier.width(8.dp))
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(Color(0xFFFFD700))
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    .padding(horizontal = 8.dp, vertical = 5.dp)
                             ) {
                                 Text(
                                     text = "5s MATCH ⚡",
@@ -490,13 +491,13 @@ fun HomeScreen(
                             border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFFEC407A).copy(alpha = 0.5f)),
                             modifier = Modifier
                                 .weight(1f)
-                                .height(64.dp)
+                                .defaultMinSize(minHeight = 66.dp)
                                 .clickable { onStartClassicGame(GameMode.PLAY_WITH_FRIEND) }
                         ) {
                             Row(
                                 modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(horizontal = 10.dp),
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 10.dp, vertical = 10.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Box(
@@ -519,12 +520,14 @@ fun HomeScreen(
                                         text = "Pass & Play 👥",
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Black,
-                                        color = Color(0xFF880E4F)
+                                        color = Color(0xFF880E4F),
+                                        maxLines = 1
                                     )
                                     Text(
-                                        text = "1 Phone • 2 Friends",
+                                        text = "1 Device • 2 Players",
                                         fontSize = 10.sp,
-                                        color = Color(0xFFAD1457)
+                                        color = Color(0xFFAD1457),
+                                        maxLines = 1
                                     )
                                 }
                             }
@@ -538,13 +541,13 @@ fun HomeScreen(
                             border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFF8E24AA).copy(alpha = 0.5f)),
                             modifier = Modifier
                                 .weight(1f)
-                                .height(64.dp)
+                                .defaultMinSize(minHeight = 66.dp)
                                 .clickable { showRoomCodeDialog = true }
                         ) {
                             Row(
                                 modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(horizontal = 10.dp),
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 10.dp, vertical = 10.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Box(
@@ -567,12 +570,14 @@ fun HomeScreen(
                                         text = "Room Code 🔑",
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Black,
-                                        color = Color(0xFF4A148C)
+                                        color = Color(0xFF4A148C),
+                                        maxLines = 1
                                     )
                                     Text(
-                                        text = "BG-XXXX Code",
+                                        text = "Private Match",
                                         fontSize = 10.sp,
-                                        color = Color(0xFF6A1B9A)
+                                        color = Color(0xFF6A1B9A),
+                                        maxLines = 1
                                     )
                                 }
                             }
@@ -613,7 +618,7 @@ fun HomeScreen(
                     ) {
                         HomeMenuCard(
                             title = "Daily Gift 🎁",
-                            subtitle = if (stats.canSpinWheelToday()) "1 Free Spin! ⭐" else "Claimed Today ⏰",
+                            subtitle = if (stats.canSpinWheelToday()) "Free Spin Ready" else "Claimed Today",
                             icon = Icons.Default.CardGiftcard,
                             accentColor = Color(0xFFE91E63),
                             modifier = Modifier.weight(1f),
@@ -621,7 +626,7 @@ fun HomeScreen(
                         )
                         HomeMenuCard(
                             title = "Themes 🎨",
-                            subtitle = "8 Fun Styles",
+                            subtitle = "8 Board Styles",
                             icon = Icons.Default.Palette,
                             accentColor = Color(0xFF0288D1),
                             modifier = Modifier.weight(1f),
@@ -636,7 +641,7 @@ fun HomeScreen(
                     ) {
                         HomeMenuCard(
                             title = "Badges 🏆",
-                            subtitle = "Star Trophies ⭐",
+                            subtitle = "Trophies & Ranks",
                             icon = Icons.Default.EmojiEvents,
                             accentColor = Color(0xFFFF8F00),
                             modifier = Modifier.weight(1f),
@@ -644,7 +649,7 @@ fun HomeScreen(
                         )
                         HomeMenuCard(
                             title = "Game Score 📊",
-                            subtitle = "${stats.totalWins} Matches Won",
+                            subtitle = "${stats.totalWins} Wins Recorded",
                             icon = Icons.Default.Star,
                             accentColor = Color(0xFF43A047),
                             modifier = Modifier.weight(1f),
@@ -1293,12 +1298,12 @@ private fun HomeMenuCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(horizontal = 10.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(38.dp)
+                    .size(36.dp)
                     .clip(CircleShape)
                     .background(accentColor.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
@@ -1307,27 +1312,26 @@ private fun HomeMenuCard(
                     imageVector = icon,
                     contentDescription = title,
                     tint = accentColor,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
                     color = Color(0xFF1A237E),
-                    fontSize = 13.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Black,
-                    maxLines = 2,
-                    lineHeight = 16.sp
+                    maxLines = 1
                 )
                 Text(
                     text = subtitle,
                     color = Color(0xFF546E7A),
-                    fontSize = 11.sp,
-                    maxLines = 2,
-                    lineHeight = 14.sp
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1
                 )
             }
         }

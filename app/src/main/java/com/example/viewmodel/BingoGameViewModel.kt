@@ -1395,27 +1395,26 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
                 val oppAvatar = currentState.opponentAvatar
 
                 val replies = when (content) {
-                    "🔥" -> listOf("👏 Full power!", "😎 Game on bro!", "🔥 Let's go!", "💪 Strategy ready hai!")
-                    "😂" -> listOf("😂 Haha mast!", "👀 Lines par dhyan de!", "😜 Wait and watch!", "🤣 Haha!")
-                    "👏" -> listOf("🤝 Thank you bhai!", "😎 Appreciate it!", "✨ Mast game chal raha hai!")
-                    "😱" -> listOf("😅 Close call tha!", "😱 Tension mat le!", "🎯 Mera turn aane de!")
-                    "😎" -> listOf("😏 Dekhte hain kaun pehle BINGO karta hai!", "🔥 Abhi dekh mera strike!", "💪 Challenge accepted!")
-                    "🎯" -> listOf("👏 Sahi number cut kiya!", "🎯 Badhiya pick!", "😱 Meri line block kar di tune!")
-                    "🥳" -> listOf("🎉 GG bro!", "🥳 Mast game!", "✨ Maza aa gaya!")
-                    "🍀" -> listOf("🍀 Kismat + Strategy!", "🤝 Good luck bhai!")
-                    "Nice! 👏" -> listOf("🤝 Thanks bro!", "😎 Saw that coming!", "🎯 Strategic move!")
-                    "GG 🤝" -> listOf("🤝 Good Game bhai!", "🎉 Awesome match!", "🔥 Ek rematch banta hai!")
-                    "Rematch? 🔥" -> listOf("🔥 Haan bilkul!", "👍 Let's play again!", "😎 Always ready for Bingo!")
-                    "Lucky! 🍀" -> listOf("🍀 Haha thodi kismat, thoda brain!", "😄 Agle round me dekh!")
+                    "🔥" -> listOf("🔥 Let's go!", "😎 Game on!", "💪 Strategy ready!", "🔥 Great energy!")
+                    "😂" -> listOf("😂 Haha nice!", "👀 Watch your lines!", "😜 Wait and see!", "🤣 Good one!")
+                    "👏" -> listOf("🤝 Thank you!", "😎 Appreciate it!", "✨ Great match!")
+                    "😱" -> listOf("😅 Close call!", "😱 Good pick!", "🎯 Watch this turn!")
+                    "😎" -> listOf("😏 Let's see who gets BINGO first!", "🔥 Nice move!", "💪 Challenge accepted!")
+                    "🎯" -> listOf("👏 Great number!", "🎯 Sharp pick!", "😱 You blocked my line!")
+                    "🥳" -> listOf("🎉 GG!", "🥳 Fun match!", "✨ Great game!")
+                    "🍀" -> listOf("🍀 Pure skill and luck!", "🤝 Good luck!")
+                    "Nice! 👏" -> listOf("🤝 Thanks!", "😎 Strategic move!", "🎯 Well played!")
+                    "GG 🤝" -> listOf("🤝 Good Game!", "🎉 Awesome match!", "🔥 Rematch next!")
+                    "Rematch? 🔥" -> listOf("🔥 Absolutely!", "👍 Let's play again!", "😎 Always ready!")
+                    "Lucky! 🍀" -> listOf("🍀 Pure tactics!", "😄 Let's see the next round!")
                     else -> listOf(
-                        "Sahi khel raha hai! 🔥",
-                        "Haha nice one! 😎",
-                        "Tough match hai bro! 🎯",
-                        "Meri 3 lines complete ho gayi! ⚡",
-                        "BINGO ke close hu mai! 😱",
-                        "Well played bhai! 🤝",
-                        "Mast cut tha! 👏",
-                        "Dekhte hain kaun jeetta hai! 🔥"
+                        "Nice move! 🔥",
+                        "Great pick! 😎",
+                        "Tough match! 🎯",
+                        "Getting close to BINGO! ⚡",
+                        "Well played! 🤝",
+                        "Awesome cut! 👏",
+                        "May the best player win! 🔥"
                     )
                 }
 
