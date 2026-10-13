@@ -81,9 +81,8 @@ fun WinningLineVerificationDialog(
     val activeTitle = when {
         selectedTab == 0 -> if (isFriend) "Player 1" else "Your Board"
         else -> when (gameMode) {
-            GameMode.VS_COMPUTER -> "Computer Bot"
             GameMode.PLAY_WITH_FRIEND -> "Player 2"
-            GameMode.PLAY_ONLINE -> "Online Opponent"
+            else -> "Opponent Board"
         }
     }
 
@@ -154,9 +153,8 @@ fun WinningLineVerificationDialog(
                     // Player 1 vs Player 2/Computer Board Selector Tabs
                     val tab1Title = if (isFriend) "Player 1 (${player1Board.completedLinesCount}/5)" else "You (${player1Board.completedLinesCount}/5)"
                     val tab2Title = when (gameMode) {
-                        GameMode.VS_COMPUTER -> "Computer (${player2OrComputerBoard.completedLinesCount}/5)"
                         GameMode.PLAY_WITH_FRIEND -> "Player 2 (${player2OrComputerBoard.completedLinesCount}/5)"
-                        GameMode.PLAY_ONLINE -> "Opponent (${player2OrComputerBoard.completedLinesCount}/5)"
+                        else -> "Opponent (${player2OrComputerBoard.completedLinesCount}/5)"
                     }
 
                     TabRow(

@@ -116,6 +116,7 @@ fun BoardSetupScreen(
     }
 
     Scaffold(
+        containerColor = theme.backgroundGradients.first(),
         topBar = {
             TopAppBar(
                 title = {

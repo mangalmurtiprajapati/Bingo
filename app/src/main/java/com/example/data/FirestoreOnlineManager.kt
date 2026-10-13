@@ -506,7 +506,8 @@ class FirestoreOnlineManager {
                 )
                 Result.success(Pair(roomId, false))
             } else {
-                val newRoomId = (100000..999999).random().toString()
+                val chars = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
+                val newRoomId = "BG" + (1..4).map { chars.random() }.joinToString("")
                 createRoom(
                     roomId = newRoomId,
                     hostId = userId,
@@ -517,6 +518,7 @@ class FirestoreOnlineManager {
                 Result.success(Pair(newRoomId, true))
             }
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             Log.e(TAG, "Error in matchmaking: ${e.message}", e)
             Result.failure(e)
         }
@@ -564,6 +566,11 @@ class FirestoreOnlineManager {
                                 guestCompletedLines = (snapshot.getLong("guestCompletedLines") ?: 0L).toInt(),
                                 winnerId = snapshot.getString("winnerId"),
                                 winnerName = snapshot.getString("winnerName"),
+                                lastReactionContent = snapshot.getString("lastReactionContent"),
+                                lastReactionSenderId = snapshot.getString("lastReactionSenderId"),
+                                lastReactionSenderName = snapshot.getString("lastReactionSenderName"),
+                                lastReactionSenderAvatar = snapshot.getString("lastReactionSenderAvatar"),
+                                lastReactionTimestamp = snapshot.getLong("lastReactionTimestamp") ?: 0L,
                                 createdAt = snapshot.getLong("createdAt") ?: 0L,
                                 updatedAt = snapshot.getLong("updatedAt") ?: 0L
                             )
@@ -668,6 +675,36 @@ class FirestoreOnlineManager {
                 ).await()
         } catch (e: Exception) {
             Log.w(TAG, "Error leaving room: ${e.message}")
+        }
+    }
+
+    /**
+     * Broadcasts in-game reaction or message to both players in the Firestore room
+     */
+    suspend fun sendRoomReaction(
+        roomId: String,
+        senderId: String,
+        senderName: String,
+        senderAvatar: String,
+        content: String
+    ): Result<Unit> {
+        val fs = firestore ?: return Result.failure(IllegalStateException("Firestore not available"))
+        return try {
+            fs.collection(ROOMS_COLLECTION).document(roomId)
+                .update(
+                    mapOf(
+                        "lastReactionContent" to content,
+                        "lastReactionSenderId" to senderId,
+                        "lastReactionSenderName" to senderName,
+                        "lastReactionSenderAvatar" to senderAvatar,
+                        "lastReactionTimestamp" to System.currentTimeMillis(),
+                        "updatedAt" to System.currentTimeMillis()
+                    )
+                ).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.w(TAG, "Error sending reaction in room $roomId: ${e.message}")
+            Result.failure(e)
         }
     }
 }

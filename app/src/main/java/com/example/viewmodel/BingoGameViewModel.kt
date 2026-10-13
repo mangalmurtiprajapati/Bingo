@@ -60,7 +60,7 @@ data class ClassicMatchState(
     val xpEarned: Int = 0,
     val viewingBoardPlayer: Int = 1,
     // Online mode properties
-    val roomCode: String = "742918",
+    val roomCode: String = "",
     val isOnlineSearching: Boolean = false,
     val onlineSearchElapsedSec: Int = 0,
     val onlineStatusMessage: String = "Ready to play",
@@ -70,6 +70,7 @@ data class ClassicMatchState(
     val isOpponentOnline: Boolean = true,
     val opponentSetupProgress: Int = 18,
     val isSimultaneousFriendMode: Boolean = false,
+    val isOnlineBot: Boolean = false,
     val challengeLevel: Int = 1,
     val currentUserId: String = "",
     val activeChallengeId: String? = null,
@@ -139,6 +140,7 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
     private var ballCallJob: Job? = null
     private var computerTurnJob: Job? = null
     private var uncalledNumbers = (1..75).shuffled().toMutableList()
+    private var lastReceivedReactionTimestamp: Long = 0L
 
     init {
         viewModelScope.launch {
@@ -390,9 +392,47 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
         soundManager.stopAmbientMusic()
     }
 
+    // ==================== REALISTIC HUMAN-LIKE PERSONAS & UNIQUE CODES ====================
+
+    data class RealisticGamerPersona(
+        val name: String,
+        val avatar: String,
+        val badge: String
+    )
+
+    private val realisticPersonas = listOf(
+        RealisticGamerPersona("Aarav_Pro99", "🔥", "Mind Striker"),
+        RealisticGamerPersona("Priya_Queen", "👑", "Bingo Master"),
+        RealisticGamerPersona("Kabir_Master", "⚡", "Speed Tapper"),
+        RealisticGamerPersona("Neha_Playz", "🌸", "Strategy Star"),
+        RealisticGamerPersona("Rohan_Striker", "🎯", "Precision Mind"),
+        RealisticGamerPersona("Vikram_Ace", "😎", "Top Ranker"),
+        RealisticGamerPersona("Ananya_Spark", "✨", "Pattern Genius"),
+        RealisticGamerPersona("Aditya_King", "🦁", "Arena Beast"),
+        RealisticGamerPersona("Sneha_Rockz", "💫", "Tactical Brain"),
+        RealisticGamerPersona("Aryan_Gamer", "🚀", "5-Line Pro"),
+        RealisticGamerPersona("Tanvi_Mind", "🧠", "Duel Champion"),
+        RealisticGamerPersona("Dev_Sniper", "🏹", "Corner Hunter"),
+        RealisticGamerPersona("Ishaan_Blitz", "⚡", "Rapid Thinker"),
+        RealisticGamerPersona("Rhea_Pro", "🌟", "Streak Legend")
+    )
+
+    fun generateComplexRoomCode(): String {
+        // Alphanumeric, unique and complex (letters + numbers, avoiding confusing 0/O and 1/I)
+        val chars = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
+        val prefix = listOf("BG", "MK", "NZ", "RD", "XP").random()
+        val randomSuffix = (1..4).map { chars.random() }.joinToString("")
+        return "$prefix$randomSuffix"
+    }
+
     // ==================== CLASSIC 5x5 (1 to 25) BINGO LOGIC ====================
 
-    fun initClassicGame(mode: GameMode) {
+    fun initClassicGame(
+        mode: GameMode,
+        forcedOpponentName: String? = null,
+        forcedOpponentLevel: Int? = null,
+        forcedOpponentAvatar: String? = null
+    ) {
         computerTurnJob?.cancel()
         val current = _classicState.value
         val computerBoard = if (mode == GameMode.VS_COMPUTER || mode == GameMode.PLAY_ONLINE) {
@@ -401,12 +441,48 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
             ClassicBingoBoard()
         }
 
+        // Generate realistic opponent profile whose level closely matches user's level!
+        val userLevel = _userStats.value.level.coerceAtLeast(1)
+        val delta = listOf(-1, 0, 1).random()
+        val matchedLevel = (userLevel + delta).coerceIn(1, 10)
+        val chosenPersona = realisticPersonas.random()
+
+        val opponentName = forcedOpponentName
+            ?: if (mode == GameMode.PLAY_ONLINE && !current.matchedOpponentName.isNullOrBlank()) {
+                current.matchedOpponentName
+            } else if (mode == GameMode.PLAY_WITH_FRIEND) {
+                "Player 2"
+            } else if (mode == GameMode.VS_COMPUTER) {
+                "Computer AI"
+            } else {
+                chosenPersona.name
+            }
+
+        val opponentLevel = forcedOpponentLevel
+            ?: if (mode == GameMode.PLAY_ONLINE && current.matchedOpponentLevel > 0) {
+                current.matchedOpponentLevel
+            } else {
+                matchedLevel
+            }
+
+        val opponentAvatar = forcedOpponentAvatar
+            ?: if (mode == GameMode.PLAY_ONLINE && current.opponentAvatar.isNotBlank() && current.opponentAvatar != "😎") {
+                current.opponentAvatar
+            } else if (mode == GameMode.VS_COMPUTER) {
+                "🤖"
+            } else {
+                chosenPersona.avatar
+            }
+
         _classicState.value = current.copy(
             gameMode = mode,
             isSetupComplete = false,
             currentSetupPlayer = 1,
             player1Board = ClassicBingoBoard(),
             player2OrComputerBoard = computerBoard,
+            matchedOpponentName = opponentName,
+            matchedOpponentLevel = opponentLevel,
+            opponentAvatar = opponentAvatar,
             matchTurn = MatchTurn.PLAYER_1_TURN,
             isComputerThinking = false,
             lastCutNumber = null,
@@ -651,7 +727,11 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
                 isComputerThinking = true
             )
 
-            if (currentRoom != null) {
+            if (state.isOnlineBot || state.gameMode == GameMode.VS_COMPUTER) {
+                // Online Bot or Offline AI takes its turn!
+                triggerComputerTurn()
+            } else if (currentRoom != null) {
+                // Real human opponent: broadcast move to Firestore room
                 val isHost = state.isHost
                 val opponentId = if (isHost) currentRoom.guestId else currentRoom.hostId
                 viewModelScope.launch {
@@ -665,8 +745,8 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
                         nextTurnPlayerId = opponentId
                     )
                 }
-            } else {
-                triggerComputerTurn() // Fallback simulation
+            } else if (!state.isSimultaneousFriendMode && state.activeChallengeId == null) {
+                triggerComputerTurn()
             }
         }
     }
@@ -674,15 +754,28 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
     private fun triggerComputerTurn() {
         computerTurnJob?.cancel()
         computerTurnJob = viewModelScope.launch {
-            delay(1100) // Realistic bot think delay
+            val checkState = _classicState.value
+            // Real Human Duel: Computer must NEVER play!
+            val isRealHumanDuel = (checkState.isSimultaneousFriendMode || checkState.activeChallengeId != null || _activeDuelRoom.value != null) && !checkState.isOnlineBot
+            if (isRealHumanDuel) {
+                return@launch
+            }
+
+            // Realistic human-like thinking delay (2.0s to 3.4s)
+            val realisticDelay = Random.nextLong(2000L, 3400L)
+            delay(realisticDelay)
 
             val currentState = _classicState.value
             if (currentState.matchOutcome != MatchOutcome.IN_PROGRESS) return@launch
+            val stillHumanDuel = (currentState.isSimultaneousFriendMode || currentState.activeChallengeId != null || _activeDuelRoom.value != null) && !currentState.isOnlineBot
+            if (stillHumanDuel) {
+                return@launch
+            }
 
             val remainingNumbers = (1..25).filter { !currentState.player2OrComputerBoard.isNumberCrossed(it) }
             if (remainingNumbers.isEmpty()) return@launch
 
-            // Strategic AI decision: Pick the number that maximizes line completions on Computer's board
+            // Strategic decision: Pick the number that maximizes line completions on board
             val bestPick = pickBestAiNumber(currentState.player2OrComputerBoard, remainingNumbers)
 
             val prevP1Lines = currentState.player1Board.completedLinesCount
@@ -701,11 +794,7 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
             val p1Won = updatedP1.hasBingo
             val p2Won = updatedP2.hasBingo
 
-            val opponentName = if (currentState.gameMode == GameMode.PLAY_ONLINE) {
-                currentState.matchedOpponentName ?: "Online Opponent"
-            } else {
-                "Computer"
-            }
+            val opponentName = currentState.matchedOpponentName ?: "Opponent"
 
             if (p1Won && p2Won) {
                 _classicState.value = currentState.copy(
@@ -823,7 +912,7 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
     // =========================================================================
 
     fun generateNewOnlineRoom(): String {
-        val code = (100000..999999).random().toString()
+        val code = generateComplexRoomCode()
         val stats = _userStats.value
         val myUid = authManager.currentUser.value?.uid ?: "player_${stats.userName.lowercase().replace(" ", "_")}"
 
@@ -892,7 +981,8 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
         _classicState.value = _classicState.value.copy(
             isOnlineSearching = true,
             onlineSearchElapsedSec = 0,
-            onlineStatusMessage = "Connecting to Firebase Matchmaking Queue... 🌐",
+            isOnlineBot = false,
+            onlineStatusMessage = "Checking online players... 5s ⚡",
             currentUserId = myUid
         )
 
@@ -911,60 +1001,96 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
                 )
                 attachRoomListener(roomId, myUid)
 
-                // Matchmaking scan loop: checks Firestore room status
-                val totalSec = 7
-                var matched = false
+                // Exact 5-Second Real-Player Matchmaking Scan Loop
+                val totalSec = 5
+                var matchedHuman = false
                 for (sec in 1..totalSec) {
                     delay(1000)
                     val currentRoom = _activeDuelRoom.value
                     if (currentRoom != null && (currentRoom.guestId != null || !isHost)) {
-                        matched = true
+                        matchedHuman = true
                         val oppName = if (isHost) (currentRoom.guestName ?: "Challenger") else currentRoom.hostName
+                        val oppAvatar = if (isHost) (currentRoom.guestAvatar ?: "⚔️") else currentRoom.hostAvatar
+                        val matchedLevel = (stats.level + listOf(-1, 0, 1).random()).coerceIn(1, 10)
+
                         _classicState.value = _classicState.value.copy(
                             isOnlineSearching = false,
+                            isOnlineBot = false,
+                            isSimultaneousFriendMode = true,
                             matchedOpponentName = oppName,
-                            matchedOpponentLevel = (1..5).random(),
-                            onlineStatusMessage = "⚔️ Matched with $oppName in Firebase! Arena Ready!",
+                            opponentAvatar = oppAvatar,
+                            matchedOpponentLevel = matchedLevel,
+                            onlineStatusMessage = "⚔️ Real Player Matched: $oppName! Arena Ready!",
                             gameMode = GameMode.PLAY_ONLINE
                         )
-                        initClassicGame(GameMode.PLAY_ONLINE)
+                        initClassicGame(
+                            mode = GameMode.PLAY_ONLINE,
+                            forcedOpponentName = oppName,
+                            forcedOpponentLevel = matchedLevel,
+                            forcedOpponentAvatar = oppAvatar
+                        )
                         onMatched()
                         break
                     } else {
                         _classicState.value = _classicState.value.copy(
                             onlineSearchElapsedSec = sec,
-                            onlineStatusMessage = "Searching online challengers across Firebase... (${totalSec - sec}s)"
+                            onlineStatusMessage = "Searching online players... (${totalSec - sec}s) ⚡"
                         )
                     }
                 }
 
-                if (!matched) {
-                    // Fast pairing with active player pool from Firestore or system challenger
-                    val onlinePool = _onlinePlayers.value.map { it.name }.filter { it.isNotBlank() }
-                    val fallbackPool = listOf("Alex_Mind", "Kavya_Star", "Leo_Thinker", "Zoya_Gamer", "Kabir_Ace", "Aarav_Pro")
-                    val chosenName = (onlinePool + fallbackPool).random()
-                    val chosenLevel = (1..5).random()
+                if (!matchedHuman) {
+                    // No real human player clicked within 5 seconds.
+                    // Clean up waiting room in Firestore so queue is neat
+                    firestoreOnlineManager.leaveRoom(roomId, myUid)
+                    _activeDuelRoom.value = null
+                    roomListenerJob?.cancel()
+
+                    // Automatically pair with a realistic computer bot with authentic name, badge & matched level
+                    val persona = realisticPersonas.random()
+                    val userLevel = stats.level.coerceAtLeast(1)
+                    val botLevel = (userLevel + listOf(-1, 0, 1).random()).coerceIn(1, 10)
+
                     _classicState.value = _classicState.value.copy(
                         isOnlineSearching = false,
-                        matchedOpponentName = chosenName,
-                        matchedOpponentLevel = chosenLevel,
-                        onlineStatusMessage = "⚔️ Matched with $chosenName (Lvl $chosenLevel)! Arena Ready!",
+                        isOnlineBot = true,
+                        isSimultaneousFriendMode = false,
+                        matchedOpponentName = persona.name,
+                        opponentAvatar = persona.avatar,
+                        matchedOpponentLevel = botLevel,
+                        onlineStatusMessage = "Matched with ${persona.name} (Lvl $botLevel)! Duel Ready!",
                         gameMode = GameMode.PLAY_ONLINE
                     )
-                    initClassicGame(GameMode.PLAY_ONLINE)
+                    initClassicGame(
+                        mode = GameMode.PLAY_ONLINE,
+                        forcedOpponentName = persona.name,
+                        forcedOpponentLevel = botLevel,
+                        forcedOpponentAvatar = persona.avatar
+                    )
                     onMatched()
                 }
             } else {
-                delay(3000)
-                val fallbackOpponent = "Alex_Mind"
+                // Network or Firestore unavailable: instant pairing with realistic bot
+                val persona = realisticPersonas.random()
+                val userLevel = stats.level.coerceAtLeast(1)
+                val botLevel = (userLevel + listOf(-1, 0, 1).random()).coerceIn(1, 10)
+
                 _classicState.value = _classicState.value.copy(
                     isOnlineSearching = false,
-                    matchedOpponentName = fallbackOpponent,
-                    matchedOpponentLevel = 2,
-                    onlineStatusMessage = "Matched with $fallbackOpponent! Ready to play!",
+                    isOnlineBot = true,
+                    isSimultaneousFriendMode = false,
+                    matchedOpponentName = persona.name,
+                    opponentAvatar = persona.avatar,
+                    matchedOpponentLevel = botLevel,
+                    onlineStatusMessage = "Matched with ${persona.name} (Lvl $botLevel)! Ready to play!",
                     gameMode = GameMode.PLAY_ONLINE
                 )
-                initClassicGame(GameMode.PLAY_ONLINE)
+                initClassicGame(
+                    mode = GameMode.PLAY_ONLINE,
+                    forcedOpponentName = persona.name,
+                    forcedOpponentLevel = botLevel,
+                    forcedOpponentAvatar = persona.avatar
+                )
                 onMatched()
             }
         }
@@ -1028,7 +1154,7 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
     ): String {
         val stats = _userStats.value
         val myUid = authManager.currentUser.value?.uid ?: "player_${stats.userName.lowercase().replace(" ", "_")}"
-        val roomCode = (100000..999999).random().toString()
+        val roomCode = generateComplexRoomCode()
 
         _classicState.value = _classicState.value.copy(
             roomCode = roomCode,
@@ -1171,6 +1297,23 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
                         }
                     }
 
+                    // Remote Chat Reaction / Message from human opponent
+                    val remoteContent = room.lastReactionContent
+                    val remoteSenderId = room.lastReactionSenderId
+                    val reactionTime = room.lastReactionTimestamp
+                    if (remoteContent != null && remoteSenderId != null && remoteSenderId != myUid && reactionTime > lastReceivedReactionTimestamp) {
+                        lastReceivedReactionTimestamp = reactionTime
+                        val reaction = ChatReaction(
+                            senderName = room.lastReactionSenderName ?: "Opponent",
+                            senderAvatar = room.lastReactionSenderAvatar ?: "⚔️",
+                            isUser = false,
+                            content = remoteContent,
+                            timestamp = reactionTime
+                        )
+                        _liveReactions.value = (_liveReactions.value + reaction).takeLast(8)
+                        soundManager.playReaction()
+                    }
+
                     // Match completed
                     if (room.winnerId != null && currentState.matchOutcome == MatchOutcome.IN_PROGRESS) {
                         if (room.winnerId == myUid) {
@@ -1221,54 +1364,76 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun sendUserReaction(content: String) {
         val stats = _userStats.value
+        val state = _classicState.value
         val userReaction = ChatReaction(
             senderName = stats.userName,
             senderAvatar = stats.userAvatar,
             isUser = true,
             content = content
         )
-        _liveReactions.value = (_liveReactions.value + userReaction).takeLast(6)
+        _liveReactions.value = (_liveReactions.value + userReaction).takeLast(8)
         soundManager.playReaction()
 
-        // Trigger realistic simulated opponent response in online or bot matches
-        viewModelScope.launch {
-            delay((1000L..2200L).random())
-            val state = _classicState.value
-            val oppName = state.matchedOpponentName ?: if (state.gameMode == GameMode.VS_COMPUTER) "Computer AI" else "Opponent"
-            val oppAvatar = state.opponentAvatar
-
-            val replies = when (content) {
-                "🔥" -> listOf("👏", "😎 Game on!", "🔥 Let's go!", "💪 Intense!")
-                "😂" -> listOf("😂 Haha!", "👀 Focus on lines!", "😜", "🤣")
-                "👏" -> listOf("🤝 Thank you!", "😎 Appreciate it!", "✨ Keep playing!")
-                "😱" -> listOf("😅 Close call!", "😱 Tension high!", "🎯 My turn next!")
-                "😎" -> listOf("😏 We will see!", "🔥 Don't celebrate yet!", "💪 Challenge accepted!")
-                "🎯" -> listOf("👏 Great pick!", "🎯 Good eye!", "😱 Watch my strike!")
-                "🥳" -> listOf("🎉 GG!", "🥳 Having fun!", "✨ Great game!")
-                "🍀" -> listOf("🍀 May the best board win!", "🤝 Luck to you too!")
-                "Good luck! 🍀" -> listOf("🍀 Good luck to you too!", "🤝 Let's play a great match!", "⚡ Best of luck!")
-                "Almost got BINGO! 😱" -> listOf("😱 Not if I get 5 lines first!", "👀 So close!", "🔥 Watch out for mine!")
-                "Nice cut! 👏" -> listOf("🤝 Thanks, buddy!", "😎 Saw that coming!", "🎯 Strategic move!")
-                "Watch this! 😎" -> listOf("👀 Show me!", "🔥 Bring it on!", "😏 Let's see!")
-                "GG (Good Game) 🤝" -> listOf("🤝 Well played!", "🎉 Awesome match!", "🔥 Rematch next!")
-                "Rematch? 🔥" -> listOf("🔥 Absolutely!", "👍 Let's play again!", "😎 Ready when you are!")
-                else -> listOf("👍", "😎", "🔥", "🤝", "🎯")
+        val currentRoom = _activeDuelRoom.value
+        if (currentRoom != null && !state.isOnlineBot && state.gameMode == GameMode.PLAY_ONLINE) {
+            // Real Human Multiplayer: broadcast reaction live to Firestore!
+            viewModelScope.launch {
+                firestoreOnlineManager.sendRoomReaction(
+                    roomId = currentRoom.roomId,
+                    senderId = state.currentUserId,
+                    senderName = stats.userName,
+                    senderAvatar = stats.userAvatar,
+                    content = content
+                )
             }
+        } else {
+            // Opponent is Computer Bot or Online Bot: Generate authentic Hindi/Hinglish gaming reply!
+            viewModelScope.launch {
+                delay((1000L..2200L).random())
+                val currentState = _classicState.value
+                val oppName = currentState.matchedOpponentName ?: "Computer AI"
+                val oppAvatar = currentState.opponentAvatar
 
-            val oppReaction = ChatReaction(
-                senderName = oppName,
-                senderAvatar = oppAvatar,
-                isUser = false,
-                content = replies.random()
-            )
-            _liveReactions.value = (_liveReactions.value + oppReaction).takeLast(6)
-            soundManager.playReaction()
+                val replies = when (content) {
+                    "🔥" -> listOf("👏 Full power!", "😎 Game on bro!", "🔥 Let's go!", "💪 Strategy ready hai!")
+                    "😂" -> listOf("😂 Haha mast!", "👀 Lines par dhyan de!", "😜 Wait and watch!", "🤣 Haha!")
+                    "👏" -> listOf("🤝 Thank you bhai!", "😎 Appreciate it!", "✨ Mast game chal raha hai!")
+                    "😱" -> listOf("😅 Close call tha!", "😱 Tension mat le!", "🎯 Mera turn aane de!")
+                    "😎" -> listOf("😏 Dekhte hain kaun pehle BINGO karta hai!", "🔥 Abhi dekh mera strike!", "💪 Challenge accepted!")
+                    "🎯" -> listOf("👏 Sahi number cut kiya!", "🎯 Badhiya pick!", "😱 Meri line block kar di tune!")
+                    "🥳" -> listOf("🎉 GG bro!", "🥳 Mast game!", "✨ Maza aa gaya!")
+                    "🍀" -> listOf("🍀 Kismat + Strategy!", "🤝 Good luck bhai!")
+                    "Nice! 👏" -> listOf("🤝 Thanks bro!", "😎 Saw that coming!", "🎯 Strategic move!")
+                    "GG 🤝" -> listOf("🤝 Good Game bhai!", "🎉 Awesome match!", "🔥 Ek rematch banta hai!")
+                    "Rematch? 🔥" -> listOf("🔥 Haan bilkul!", "👍 Let's play again!", "😎 Always ready for Bingo!")
+                    "Lucky! 🍀" -> listOf("🍀 Haha thodi kismat, thoda brain!", "😄 Agle round me dekh!")
+                    else -> listOf(
+                        "Sahi khel raha hai! 🔥",
+                        "Haha nice one! 😎",
+                        "Tough match hai bro! 🎯",
+                        "Meri 3 lines complete ho gayi! ⚡",
+                        "BINGO ke close hu mai! 😱",
+                        "Well played bhai! 🤝",
+                        "Mast cut tha! 👏",
+                        "Dekhte hain kaun jeetta hai! 🔥"
+                    )
+                }
+
+                val oppReaction = ChatReaction(
+                    senderName = oppName,
+                    senderAvatar = oppAvatar,
+                    isUser = false,
+                    content = replies.random()
+                )
+                _liveReactions.value = (_liveReactions.value + oppReaction).takeLast(8)
+                soundManager.playReaction()
+            }
         }
     }
 
     fun postOpponentReaction(content: String) {
         val state = _classicState.value
-        val oppName = state.matchedOpponentName ?: if (state.gameMode == GameMode.VS_COMPUTER) "Computer AI" else "Opponent"
+        val oppName = state.matchedOpponentName ?: "Opponent"
         val oppAvatar = state.opponentAvatar
         val oppReaction = ChatReaction(
             senderName = oppName,

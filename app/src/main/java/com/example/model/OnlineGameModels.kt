@@ -75,6 +75,11 @@ data class OnlineDuelRoom(
     val guestCompletedLines: Int = 0,
     val winnerId: String? = null,
     val winnerName: String? = null,
+    val lastReactionContent: String? = null,
+    val lastReactionSenderId: String? = null,
+    val lastReactionSenderName: String? = null,
+    val lastReactionSenderAvatar: String? = null,
+    val lastReactionTimestamp: Long = 0L,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )

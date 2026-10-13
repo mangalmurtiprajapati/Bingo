@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Celebration
@@ -51,6 +52,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -120,20 +123,20 @@ fun ClassicBingoGameScreen(
 
     val opponentTitle = when {
         isFriendMode -> if (state.viewingBoardPlayer == 1) "Player 2" else "Player 1"
-        state.gameMode == GameMode.VS_COMPUTER -> "Computer Bot"
+        !state.matchedOpponentName.isNullOrBlank() -> "${state.matchedOpponentName} (Lvl ${state.matchedOpponentLevel})"
         else -> "Online Opponent"
     }
 
     Scaffold(
+        containerColor = theme.backgroundGradients.first(),
         topBar = {
             TopAppBar(
                 title = {
                     Column {
                         Text(
                             text = when (state.gameMode) {
-                                GameMode.VS_COMPUTER -> "You vs Computer AI"
                                 GameMode.PLAY_WITH_FRIEND -> "Player 1 vs Player 2"
-                                GameMode.PLAY_ONLINE -> "Online Match"
+                                else -> "Duel: You vs ${state.matchedOpponentName ?: "Opponent"}"
                             },
                             fontWeight = FontWeight.Black,
                             fontSize = 17.sp,
@@ -321,7 +324,7 @@ fun ClassicBingoGameScreen(
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = "🤖 Computer is picking...",
+                                        text = "${state.matchedOpponentName ?: "Opponent"} is thinking... 🤔",
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White
@@ -436,96 +439,227 @@ fun ClassicBingoGameScreen(
                     }
                 }
 
-                // 5. Live Emoji & Reaction Dock (Compact & sleek for friend / multiplayer)
-                if (state.gameMode != GameMode.VS_COMPUTER) {
-                    var showQuickChatList by remember { mutableStateOf(false) }
-
-                    Card(
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A).copy(alpha = 0.9f)),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFFD700).copy(alpha = 0.4f)),
-                        modifier = Modifier.fillMaxWidth()
+                // 5. Live In-Game Chat Feed & Reaction Bubbles (Visible on screen)
+                if (reactions.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(Color(0xFF0F172A).copy(alpha = 0.85f))
+                            .border(1.dp, Color(0xFFFFD700).copy(alpha = 0.35f), RoundedCornerShape(14.dp))
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 10.dp, vertical = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            // Reaction Row with 5 Quick Emojis + Chat Toggle
+                            Text(
+                                text = "LIVE GAME CHAT 💬",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color(0xFFFFD700)
+                            )
+                            Text(
+                                text = "${reactions.size} messages",
+                                fontSize = 9.sp,
+                                color = Color.White.copy(alpha = 0.6f)
+                            )
+                        }
+
+                        // Display last 3 chat messages in styled bubbles
+                        reactions.takeLast(3).forEach { reaction ->
+                            val isMe = reaction.isUser
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    val quickEmojis = listOf("🔥", "😂", "👏", "🎯", "😎")
-                                    quickEmojis.forEach { emoji ->
-                                        Box(
-                                            modifier = Modifier
-                                                .size(36.dp)
-                                                .clip(CircleShape)
-                                                .background(Color(0xFF1E293B))
-                                                .clickable { onSendReaction(emoji) },
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(text = emoji, fontSize = 18.sp)
-                                        }
-                                    }
+                                if (!isMe) {
+                                    Text(text = reaction.senderAvatar, fontSize = 14.sp)
+                                    Spacer(modifier = Modifier.width(4.dp))
                                 }
-
                                 Box(
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(if (showQuickChatList) Color(0xFFFFD700) else Color(0xFF1E293B))
-                                        .clickable { showQuickChatList = !showQuickChatList }
-                                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                                    contentAlignment = Alignment.Center
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(if (isMe) Color(0xFF0288D1) else Color(0xFF334155))
+                                        .border(
+                                            width = 1.dp,
+                                            color = if (isMe) Color(0xFF81D4FA) else Color(0xFFFFD700).copy(alpha = 0.4f),
+                                            shape = RoundedCornerShape(10.dp)
+                                        )
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
                                     Text(
-                                        text = if (showQuickChatList) "Close ✕" else "Chat 💬",
+                                        text = if (isMe) "You: ${reaction.content}" else "${reaction.senderName}: ${reaction.content}",
                                         fontSize = 11.sp,
-                                        fontWeight = FontWeight.Black,
-                                        color = if (showQuickChatList) Color(0xFF0F172A) else Color(0xFFFFD700)
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
                                     )
+                                }
+                                if (isMe) {
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(text = reaction.senderAvatar, fontSize = 14.sp)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // 6. Interactive Live Chat & Reaction Dock (ENABLED IN ALL MODES)
+                var customMessageText by remember { mutableStateOf("") }
+                var showQuickChatList by remember { mutableStateOf(false) }
+
+                Card(
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+                    border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFFFFD700).copy(alpha = 0.6f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Row A: Quick Emojis + Phrases Toggle
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                val quickEmojis = listOf("🔥", "😂", "👏", "🎯", "😎", "🍀", "🥳")
+                                quickEmojis.forEach { emoji ->
+                                    Box(
+                                        modifier = Modifier
+                                            .size(34.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF334155))
+                                            .clickable { onSendReaction(emoji) },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(text = emoji, fontSize = 16.sp)
+                                    }
                                 }
                             }
 
-                            // Expandable Quick Chat Pills
-                            AnimatedVisibility(visible = showQuickChatList) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(top = 4.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    val quickChats = listOf("Nice! 👏", "GG 🤝", "Rematch? 🔥", "Lucky! 🍀")
-                                    quickChats.forEach { phrase ->
-                                        Box(
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(Color(0xFF334155))
-                                                .clickable {
-                                                    onSendReaction(phrase)
-                                                    showQuickChatList = false
-                                                }
-                                                .padding(vertical = 6.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(
-                                                text = phrase,
-                                                fontSize = 10.sp,
-                                                color = Color.White,
-                                                fontWeight = FontWeight.Bold,
-                                                maxLines = 1
-                                            )
-                                        }
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(if (showQuickChatList) Color(0xFFFFD700) else Color(0xFF334155))
+                                    .clickable { showQuickChatList = !showQuickChatList }
+                                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (showQuickChatList) "✕" else "Chips 💬",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = if (showQuickChatList) Color(0xFF0F172A) else Color(0xFFFFD700)
+                                )
+                            }
+                        }
+
+                        // Row B: Expandable Quick Phrases Chips
+                        AnimatedVisibility(visible = showQuickChatList) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 2.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                val quickChats = listOf("Nice! 👏", "GG 🤝", "Rematch? 🔥", "Lucky! 🍀", "BINGO! ⚡")
+                                quickChats.forEach { phrase ->
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(Color(0xFF0F172A))
+                                            .border(1.dp, Color(0xFFFFD700).copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                            .clickable {
+                                                onSendReaction(phrase)
+                                                showQuickChatList = false
+                                            }
+                                            .padding(vertical = 6.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = phrase,
+                                            fontSize = 9.sp,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            textAlign = TextAlign.Center
+                                        )
                                     }
                                 }
+                            }
+                        }
+
+                        // Row C: Custom Message Text Input Field + Send Button (Message Karo!)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = customMessageText,
+                                onValueChange = { customMessageText = it },
+                                placeholder = {
+                                    Text(
+                                        text = "Type message (Hindi / English)... 💬",
+                                        fontSize = 12.sp,
+                                        color = Color.White.copy(alpha = 0.55f)
+                                    )
+                                },
+                                singleLine = true,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White,
+                                    focusedContainerColor = Color(0xFF0F172A),
+                                    unfocusedContainerColor = Color(0xFF0F172A),
+                                    focusedBorderColor = Color(0xFFFFD700),
+                                    unfocusedBorderColor = Color.White.copy(alpha = 0.25f)
+                                ),
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(50.dp)
+                                    .testTag("in_game_chat_input")
+                            )
+
+                            Button(
+                                onClick = {
+                                    if (customMessageText.isNotBlank()) {
+                                        onSendReaction(customMessageText.trim())
+                                        customMessageText = ""
+                                    }
+                                },
+                                enabled = customMessageText.isNotBlank(),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFFFFD700),
+                                    contentColor = Color(0xFF1A0033),
+                                    disabledContainerColor = Color.White.copy(alpha = 0.15f),
+                                    disabledContentColor = Color.White.copy(alpha = 0.35f)
+                                ),
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier
+                                    .height(50.dp)
+                                    .testTag("in_game_chat_send_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.Send,
+                                    contentDescription = "Send Message",
+                                    modifier = Modifier.size(18.dp)
+                                )
                             }
                         }
                     }
@@ -541,7 +675,7 @@ fun ClassicBingoGameScreen(
         Dialog(onDismissRequest = { /* Require action button click */ }) {
             Card(
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1A173B)),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E3A8A)),
                 elevation = CardDefaults.cardElevation(defaultElevation = 14.dp),
                 border = androidx.compose.foundation.BorderStroke(2.5.dp, Color(0xFFFFD700)),
                 modifier = Modifier

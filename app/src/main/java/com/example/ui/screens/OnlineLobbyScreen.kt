@@ -28,6 +28,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -202,6 +203,7 @@ Can you beat my brain strategy? Join now! 🎯⚡
     }
 
     Scaffold(
+        containerColor = theme.backgroundGradients.first(),
         topBar = {
             TopAppBar(
                 title = {
@@ -537,10 +539,24 @@ Can you beat my brain strategy? Join now! 🎯⚡
                                         fontSize = 13.sp,
                                         textAlign = TextAlign.Center
                                     )
+                                    LinearProgressIndicator(
+                                        progress = { (state.onlineSearchElapsedSec / 5f).coerceIn(0f, 1f) },
+                                        color = Color(0xFFFFD700),
+                                        trackColor = Color.White.copy(alpha = 0.2f),
+                                        modifier = Modifier
+                                            .fillMaxWidth(0.8f)
+                                            .height(6.dp)
+                                            .clip(RoundedCornerShape(3.dp))
+                                    )
                                     Text(
-                                        "Searching time: ${state.onlineSearchElapsedSec}s (Connecting within 5-10s)",
-                                        color = Color.White.copy(alpha = 0.8f),
-                                        fontSize = 11.sp
+                                        text = if (state.onlineSearchElapsedSec < 5) {
+                                            "⏱️ Real Player Search: ${5 - state.onlineSearchElapsedSec}s remaining"
+                                        } else {
+                                            "⚡ Starting duel arena now!"
+                                        },
+                                        color = Color.White.copy(alpha = 0.9f),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp
                                     )
 
                                     Row(
@@ -674,68 +690,107 @@ Can you beat my brain strategy? Join now! 🎯⚡
                             }
                         }
 
-                        // Room Code Box with Copy & New Code
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(Color(0xFF0F172A))
-                                .border(1.5.dp, Color(0xFFFFD700).copy(alpha = 0.5f), RoundedCornerShape(14.dp))
-                                .padding(12.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                        // Room Code Box: Generate unique code when user creates room or challenges friend!
+                        if (state.roomCode.isBlank()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(Color(0xFF0F172A))
+                                    .border(1.5.dp, Color(0xFFFFD700).copy(alpha = 0.3f), RoundedCornerShape(14.dp))
+                                    .padding(14.dp),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
                                     Text(
-                                        "Room Code (Kamra Code):",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = Color(0xFF94A3B8)
+                                        "Har match ke liye alag aur unique complex room code banayein:",
+                                        fontSize = 12.sp,
+                                        color = Color(0xFF94A3B8),
+                                        textAlign = TextAlign.Center
                                     )
-                                    Text(
-                                        "#${state.roomCode}",
-                                        fontSize = 24.sp,
-                                        fontWeight = FontWeight.Black,
-                                        color = Color(0xFFFFD700)
-                                    )
+                                    Button(
+                                        onClick = { onCreateRoom() },
+                                        shape = RoundedCornerShape(12.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD700)),
+                                        modifier = Modifier.fillMaxWidth().height(46.dp)
+                                    ) {
+                                        Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFF1A0033))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            "GENERATE UNIQUE ROOM CODE 🔑",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = Color(0xFF1A0033)
+                                        )
+                                    }
                                 }
-
+                            }
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(Color(0xFF0F172A))
+                                    .border(1.5.dp, Color(0xFFFFD700).copy(alpha = 0.8f), RoundedCornerShape(14.dp))
+                                    .padding(12.dp)
+                            ) {
                                 Row(
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    IconButton(
-                                        onClick = {
-                                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                            val clip = ClipData.newPlainText("Bingo Room Code", state.roomCode)
-                                            clipboard.setPrimaryClip(clip)
-                                            Toast.makeText(context, "Room Code #${state.roomCode} copied!", Toast.LENGTH_SHORT).show()
-                                        }
-                                    ) {
-                                        Icon(
-                                            Icons.Default.ContentCopy,
-                                            contentDescription = "Copy Code",
-                                            tint = Color.White
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            "Your Unique Room Code (Alphanumeric):",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = Color(0xFF94A3B8)
+                                        )
+                                        Text(
+                                            "#${state.roomCode}",
+                                            fontSize = 24.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = Color(0xFFFFD700)
                                         )
                                     }
 
-                                    Button(
-                                        onClick = onCreateRoom,
-                                        shape = RoundedCornerShape(10.dp),
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD700)),
-                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                                        modifier = Modifier.height(38.dp)
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(
-                                            "New Code",
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Black,
-                                            color = Color(0xFF1A0033),
-                                            maxLines = 1
-                                        )
+                                        IconButton(
+                                            onClick = {
+                                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                                val clip = ClipData.newPlainText("Bingo Room Code", state.roomCode)
+                                                clipboard.setPrimaryClip(clip)
+                                                Toast.makeText(context, "Room Code #${state.roomCode} copied!", Toast.LENGTH_SHORT).show()
+                                            }
+                                        ) {
+                                            Icon(
+                                                Icons.Default.ContentCopy,
+                                                contentDescription = "Copy Code",
+                                                tint = Color.White
+                                            )
+                                        }
+
+                                        Button(
+                                            onClick = { onCreateRoom() },
+                                            shape = RoundedCornerShape(10.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD700)),
+                                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                            modifier = Modifier.height(38.dp)
+                                        ) {
+                                            Text(
+                                                "New Code",
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Black,
+                                                color = Color(0xFF1A0033),
+                                                maxLines = 1
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -870,11 +925,14 @@ Can you beat my brain strategy? Join now! 🎯⚡
                         ) {
                             OutlinedTextField(
                                 value = joinCodeInput,
-                                onValueChange = { if (it.length <= 6) joinCodeInput = it },
-                                label = { Text("Enter 6-digit room code") },
-                                placeholder = { Text("e.g. 742918") },
+                                onValueChange = { if (it.length <= 8) joinCodeInput = it.uppercase() },
+                                label = { Text("Enter room code (Letters + Numbers)") },
+                                placeholder = { Text("e.g. BG7X9K") },
                                 singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                keyboardOptions = KeyboardOptions(
+                                    capitalization = KeyboardCapitalization.Characters,
+                                    keyboardType = KeyboardType.Ascii
+                                ),
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(10.dp),
                                 colors = OutlinedTextFieldDefaults.colors(
