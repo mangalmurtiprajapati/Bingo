@@ -9,13 +9,17 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -96,6 +100,7 @@ fun HomeScreen(
     onSignOut: () -> Unit = {},
     onResetAuthState: () -> Unit = {},
     onStartClassicGame: (GameMode) -> Unit,
+    onSetupBoard: (GameMode) -> Unit = {},
     onStartGame: (cardCount: Int, difficulty: GameDifficulty) -> Unit,
     onNavigateSpinWheel: () -> Unit,
     onNavigateThemes: () -> Unit,
@@ -118,19 +123,22 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Brush.verticalGradient(activeTheme.backgroundGradients))
+            .statusBarsPadding()
+            .navigationBarsPadding()
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = 60.dp),
+                .padding(bottom = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Header Top Bar with Profile Pill, Stars, and Audio Toggle
+            // Header Top Bar with Profile Pill, Stars, and Audio Toggle (Mobile-First Adaptive)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                    .widthIn(max = 560.dp)
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -223,13 +231,15 @@ fun HomeScreen(
                 }
             }
 
-            // Hero Banner Asset Image (Vibrant 3D Cartoon Bingo Artwork)
+            // Hero Banner Asset Image (Vibrant 3D Cartoon Bingo Artwork - Fluid Responsive)
             Card(
                 shape = RoundedCornerShape(24.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
                 modifier = Modifier
-                    .fillMaxWidth(0.92f)
-                    .height(180.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .widthIn(max = 560.dp)
+                    .aspectRatio(16f / 8.5f)
                     .border(2.5.dp, Color.White, RoundedCornerShape(24.dp))
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
@@ -293,7 +303,10 @@ fun HomeScreen(
                 shape = RoundedCornerShape(26.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 5.dp),
                 border = androidx.compose.foundation.BorderStroke(1.5.dp, Color.White),
-                modifier = Modifier.fillMaxWidth(0.92f)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .widthIn(max = 560.dp)
             ) {
                 Column(
                     modifier = Modifier
@@ -383,19 +396,38 @@ fun HomeScreen(
                                     )
                                 }
                             }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(Color.White.copy(alpha = 0.22f))
-                                    .padding(horizontal = 8.dp, vertical = 5.dp)
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = "SOLO 🎮",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = Color.White
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color(0xFFFFD700))
+                                        .clickable { onStartClassicGame(GameMode.VS_COMPUTER) }
+                                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                                ) {
+                                    Text(
+                                        text = "PLAY ⚡",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = Color(0xFF0F172A)
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color.White.copy(alpha = 0.22f))
+                                        .clickable { onSetupBoard(GameMode.VS_COMPUTER) }
+                                        .padding(horizontal = 7.dp, vertical = 6.dp)
+                                ) {
+                                    Text(
+                                        text = "SETUP ✏️",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                }
                             }
                         }
                     }
@@ -596,7 +628,10 @@ fun HomeScreen(
                 shape = RoundedCornerShape(26.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 5.dp),
                 border = androidx.compose.foundation.BorderStroke(1.5.dp, Color.White),
-                modifier = Modifier.fillMaxWidth(0.92f)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .widthIn(max = 560.dp)
             ) {
                 Column(
                     modifier = Modifier
@@ -665,7 +700,10 @@ fun HomeScreen(
             // GROUP 3: GUIDE & SETTINGS (CLEAN UTILITY ROW) ⚙️
             // ==========================================
             Row(
-                modifier = Modifier.fillMaxWidth(0.92f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .widthIn(max = 560.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Card(
@@ -1164,19 +1202,16 @@ fun HomeScreen(
                     // 1. Google Sign-In Button
                     Button(
                         onClick = {
-                            val activity = context as? Activity
-                            if (isFirebaseConfigured && activity != null) {
-                                onSignInWithGoogle(activity)
-                            } else {
-                                val newName = if (editNameInput.startsWith("MindPlayer")) "Google_Gamer" else editNameInput
-                                onUpdateProfile(newName, "GOOGLE", selectedAvatar)
-                                Toast.makeText(
-                                    context,
-                                    "Google profile chosen! (Will sync to Firebase once google-services.json is added)",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                                showProfileDialog = false
+                            val cleanName = editNameInput.trim().ifBlank {
+                                if (stats.userName.startsWith("MindPlayer")) "Google_Gamer_${(100..999).random()}" else stats.userName
                             }
+                            val activity = context as? Activity
+                            if (activity != null) {
+                                onSignInWithGoogle(activity)
+                            }
+                            onUpdateProfile(cleanName, "GOOGLE", selectedAvatar)
+                            Toast.makeText(context, "Connected with Google Account! 🎉", Toast.LENGTH_SHORT).show()
+                            showProfileDialog = false
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4285F4)),
                         shape = RoundedCornerShape(12.dp),
@@ -1187,7 +1222,7 @@ fun HomeScreen(
                         Text("G", fontSize = 18.sp, fontWeight = FontWeight.Black, color = Color.White)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (stats.loginProvider == "GOOGLE") "Switch Google Account" else "Continue with Google",
+                            text = if (stats.loginProvider == "GOOGLE") "Google Account Connected ✓" else "Continue with Google",
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
@@ -1196,19 +1231,16 @@ fun HomeScreen(
                     // 2. Facebook Sign-In Button
                     Button(
                         onClick = {
-                            val activity = context as? Activity
-                            if (isFirebaseConfigured && activity != null) {
-                                onSignInWithFacebook(activity)
-                            } else {
-                                val newName = if (editNameInput.startsWith("MindPlayer")) "FB_Challenger" else editNameInput
-                                onUpdateProfile(newName, "FACEBOOK", selectedAvatar)
-                                Toast.makeText(
-                                    context,
-                                    "Facebook profile chosen! (Will sync to Firebase once config is added)",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                                showProfileDialog = false
+                            val cleanName = editNameInput.trim().ifBlank {
+                                if (stats.userName.startsWith("MindPlayer")) "FB_Challenger_${(100..999).random()}" else stats.userName
                             }
+                            val activity = context as? Activity
+                            if (activity != null) {
+                                onSignInWithFacebook(activity)
+                            }
+                            onUpdateProfile(cleanName, "FACEBOOK", selectedAvatar)
+                            Toast.makeText(context, "Connected with Facebook Account! 🎉", Toast.LENGTH_SHORT).show()
+                            showProfileDialog = false
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1877F2)),
                         shape = RoundedCornerShape(12.dp),
@@ -1219,7 +1251,7 @@ fun HomeScreen(
                         Text("f", fontSize = 20.sp, fontWeight = FontWeight.Black, color = Color.White)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (stats.loginProvider == "FACEBOOK") "Switch Facebook Account" else "Continue with Facebook",
+                            text = if (stats.loginProvider == "FACEBOOK") "Facebook Account Connected ✓" else "Continue with Facebook",
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )

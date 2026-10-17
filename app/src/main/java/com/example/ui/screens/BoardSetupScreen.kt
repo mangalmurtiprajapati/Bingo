@@ -13,9 +13,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -167,6 +169,8 @@ fun BoardSetupScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .navigationBarsPadding()
+                    .widthIn(max = 560.dp)
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -366,19 +370,22 @@ fun BoardSetupScreen(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Main "Start Match" or "Next Player" Button
+                // Main "Start Match" or "Next Player" Button (Always responsive, auto-fills if empty)
                 Button(
-                    onClick = onProceed,
-                    enabled = isBoardComplete,
+                    onClick = {
+                        if (!isBoardComplete) {
+                            onAutoFill()
+                        }
+                        onProceed()
+                    },
+                    enabled = true,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
                         .testTag("start_match_button"),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFFFFD700),
-                        contentColor = Color(0xFF1A0033),
-                        disabledContainerColor = Color.White.copy(alpha = 0.2f),
-                        disabledContentColor = Color.White.copy(alpha = 0.4f)
+                        contentColor = Color(0xFF1A0033)
                     ),
                     shape = RoundedCornerShape(16.dp),
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 6.dp)
@@ -391,10 +398,11 @@ fun BoardSetupScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = when {
-                            isFriendMode && !state.isSimultaneousFriendMode && state.currentSetupPlayer == 1 -> "NEXT: PLAYER 2 BOARD"
+                            isFriendMode && !state.isSimultaneousFriendMode && state.currentSetupPlayer == 1 -> "NEXT: PLAYER 2 BOARD ➡️"
+                            !isBoardComplete -> "AUTO-FILL & START MATCH 🎯"
                             else -> "START MATCH 🎯"
                         },
-                        fontSize = 17.sp,
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Black
                     )
                 }

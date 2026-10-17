@@ -53,14 +53,14 @@ fun ClassicBingoGrid(
     ) {
         Column(
             modifier = Modifier
-                .padding(10.dp)
+                .padding(8.dp)
                 .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             for (r in 0 until 5) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     for (c in 0 until 5) {
                         val number = board.cells.getOrNull(r)?.getOrNull(c)
@@ -103,12 +103,12 @@ fun ClassicBingoGrid(
                             modifier = Modifier
                                 .weight(1f)
                                 .aspectRatio(1f)
-                                .clip(RoundedCornerShape(10.dp))
+                                .clip(RoundedCornerShape(8.dp))
                                 .background(tileBg)
                                 .border(
                                     width = if (isLastCut || isInCompletedLine) 2.5.dp else if (number != null) 2.dp else 1.2.dp,
                                     color = tileBorderColor,
-                                    shape = RoundedCornerShape(10.dp)
+                                    shape = RoundedCornerShape(8.dp)
                                 )
                                 .clickable(enabled = enabled) {
                                     onCellClick(r, c, number)
@@ -119,16 +119,18 @@ fun ClassicBingoGrid(
                                 Text(
                                     text = number.toString(),
                                     color = textColor,
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Black
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Black,
+                                    maxLines = 1
                                 )
                             } else if (isSetupMode) {
                                 // Clean subtle slot indicator
                                 Text(
                                     text = "${r * 5 + c + 1}",
                                     color = Color(0xFF94A3B8),
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1
                                 )
                             }
 

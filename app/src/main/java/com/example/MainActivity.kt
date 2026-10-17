@@ -102,8 +102,13 @@ fun KidsBingoApp(
                     if (mode == GameMode.PLAY_ONLINE) {
                         navController.navigate("online_lobby")
                     } else {
-                        navController.navigate("classic_setup")
+                        viewModel.proceedToNextSetupOrStartMatch()
+                        navController.navigate("classic_game")
                     }
+                },
+                onSetupBoard = { mode ->
+                    viewModel.initClassicGame(mode)
+                    navController.navigate("classic_setup")
                 },
                 onStartGame = { cards, diff ->
                     viewModel.startNewGame(cardCount = cards, difficulty = diff)

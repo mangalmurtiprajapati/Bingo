@@ -21,9 +21,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -264,8 +266,10 @@ Can you beat my brain strategy? Join now! 🎯⚡
                 modifier = Modifier
                     .fillMaxSize()
                     .imePadding()
+                    .navigationBarsPadding()
                     .verticalScroll(rememberScrollState())
-                    .padding(14.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .widthIn(max = 560.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
@@ -1506,6 +1510,17 @@ Can you beat my brain strategy? Join now! 🎯⚡
                     ) {
                         Text("ENTER DUEL ARENA 🎯", color = Color.White, fontWeight = FontWeight.Black)
                     }
+                } else if (isPending) {
+                    Button(
+                        onClick = {
+                            onCancelOutgoingChallenge()
+                            onProceedToSetup()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB300)),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("START MATCH NOW ⚡", color = Color(0xFF1A0033), fontWeight = FontWeight.Black)
+                    }
                 } else if (isRejected) {
                     Button(
                         onClick = { onCancelOutgoingChallenge() },
@@ -1574,25 +1589,46 @@ Can you beat my brain strategy? Join now! 🎯⚡
                     }
 
                     Text(
-                        "Sending a challenge will notify the player with an incoming duel alert so they can accept or decline.",
+                        "Sending a challenge notifies your friend with a duel alert. You can also start playing right away!",
                         fontSize = 11.sp,
                         color = Color(0xFF64748B)
                     )
                 }
             },
             confirmButton = {
-                Button(
-                    onClick = {
-                        if (customTargetName.isNotBlank()) {
-                            onSendCustomChallenge(customTargetName.trim(), customTargetLevel)
-                            customTargetName = ""
-                            customTargetLevel = 1
-                            showCustomChallengeDialog = false
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB300))
-                ) {
-                    Text("SEND CHALLENGE ⚔️", color = Color(0xFF1A0033), fontWeight = FontWeight.Black)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            if (customTargetName.isNotBlank()) {
+                                val name = customTargetName.trim()
+                                val lvl = customTargetLevel
+                                onSendCustomChallenge(name, lvl)
+                                customTargetName = ""
+                                customTargetLevel = 1
+                                showCustomChallengeDialog = false
+                                onProceedToSetup()
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853)),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("PLAY NOW ⚡", color = Color.White, fontWeight = FontWeight.Black)
+                    }
+
+                    Button(
+                        onClick = {
+                            if (customTargetName.isNotBlank()) {
+                                onSendCustomChallenge(customTargetName.trim(), customTargetLevel)
+                                customTargetName = ""
+                                customTargetLevel = 1
+                                showCustomChallengeDialog = false
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB300)),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("INVITE 📲", color = Color(0xFF1A0033), fontWeight = FontWeight.Black)
+                    }
                 }
             },
             dismissButton = {

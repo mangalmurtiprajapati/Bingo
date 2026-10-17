@@ -478,7 +478,7 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
             gameMode = mode,
             isSetupComplete = false,
             currentSetupPlayer = 1,
-            player1Board = ClassicBingoBoard(),
+            player1Board = ClassicBingoBoard.generateRandomBoard(),
             player2OrComputerBoard = computerBoard,
             matchedOpponentName = opponentName,
             matchedOpponentLevel = opponentLevel,
@@ -1167,6 +1167,23 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
             isSimultaneousFriendMode = true
         )
 
+        val tempChallengeId = "chal_${System.currentTimeMillis()}"
+        val initialChallenge = FriendChallenge(
+            id = tempChallengeId,
+            senderId = myUid,
+            senderName = stats.userName,
+            senderLevel = stats.level,
+            senderAvatar = stats.userAvatar,
+            receiverId = receiverId,
+            receiverName = receiverName,
+            roomCode = roomCode,
+            status = ChallengeStatus.PENDING,
+            statusMessage = "Live duel challenge sent to $receiverName...",
+            createdAt = System.currentTimeMillis(),
+            updatedAt = System.currentTimeMillis()
+        )
+        _outgoingChallenge.value = initialChallenge
+
         viewModelScope.launch {
             val result = firestoreOnlineManager.sendChallenge(
                 senderId = myUid,
@@ -1178,28 +1195,35 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
                 roomCode = roomCode
             )
 
-            result.onSuccess { challengeId ->
-                _classicState.value = _classicState.value.copy(activeChallengeId = challengeId)
-                attachRoomListener(roomCode, myUid)
+            val challengeId = result.getOrNull() ?: tempChallengeId
+            _classicState.value = _classicState.value.copy(activeChallengeId = challengeId)
+            attachRoomListener(roomCode, myUid)
 
-                // Real-time listener for challenge status changes
-                challengeListenerJob?.cancel()
-                challengeListenerJob = viewModelScope.launch {
-                    firestoreOnlineManager.listenChallenge(challengeId).collectLatest { challenge ->
-                        _outgoingChallenge.value = challenge
-                        if (challenge != null) {
-                            when (challenge.status) {
-                                ChallengeStatus.ACCEPTED -> {
-                                    _classicState.value = _classicState.value.copy(
-                                        onlineStatusMessage = "⚡ $receiverName ACCEPTED YOUR CHALLENGE! Entering Duel Arena..."
-                                    )
-                                    initClassicGame(GameMode.PLAY_ONLINE)
-                                    onAcceptedGoToSetup()
-                                }
-                                ChallengeStatus.REJECTED -> {
-                                    _classicState.value = _classicState.value.copy(
-                                        onlineStatusMessage = "🛡️ $receiverName declined the challenge. Opponent retreated."
-                                    )
+            // Real-time listener for challenge status changes
+            challengeListenerJob?.cancel()
+            challengeListenerJob = viewModelScope.launch {
+                if (result.isSuccess) {
+                    launch {
+                        firestoreOnlineManager.listenChallenge(challengeId).collectLatest { challenge ->
+                            if (challenge != null) {
+                                _outgoingChallenge.value = challenge
+                                when (challenge.status) {
+                                    ChallengeStatus.ACCEPTED -> {
+                                        _classicState.value = _classicState.value.copy(
+                                            onlineStatusMessage = "⚡ $receiverName ACCEPTED! Entering Duel Arena..."
+                                        )
+                                        initClassicGame(
+                                            mode = GameMode.PLAY_ONLINE,
+                                            forcedOpponentName = receiverName,
+                                            forcedOpponentLevel = receiverLevel
+                                        )
+                                        onAcceptedGoToSetup()
+                                    }
+                                    ChallengeStatus.REJECTED -> {
+                                        _classicState.value = _classicState.value.copy(
+                                            onlineStatusMessage = "🛡️ $receiverName declined the challenge."
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -1208,6 +1232,38 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
             }
         }
         return roomCode
+    }
+
+    /**
+     * Direct 1-tap friend match start (Never gets stuck waiting)
+     */
+    fun startDirectFriendMatch(
+        friendName: String,
+        friendLevel: Int = 1,
+        onStart: () -> Unit = {}
+    ) {
+        _outgoingChallenge.value = null
+        challengeListenerJob?.cancel()
+        val roomCode = generateComplexRoomCode()
+        val stats = _userStats.value
+        val myUid = authManager.currentUser.value?.uid ?: "player_${stats.userName.lowercase().replace(" ", "_")}"
+
+        _classicState.value = _classicState.value.copy(
+            roomCode = roomCode,
+            matchedOpponentName = friendName,
+            matchedOpponentLevel = friendLevel,
+            isHost = true,
+            currentUserId = myUid,
+            isSimultaneousFriendMode = true,
+            gameMode = GameMode.PLAY_ONLINE,
+            onlineStatusMessage = "⚡ Duel Arena ready with $friendName!"
+        )
+        initClassicGame(
+            mode = GameMode.PLAY_ONLINE,
+            forcedOpponentName = friendName,
+            forcedOpponentLevel = friendLevel
+        )
+        onStart()
     }
 
     /**
