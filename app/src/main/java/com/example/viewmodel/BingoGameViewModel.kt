@@ -1240,6 +1240,7 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
     fun startDirectFriendMatch(
         friendName: String,
         friendLevel: Int = 1,
+        skipSetup: Boolean = false,
         onStart: () -> Unit = {}
     ) {
         _outgoingChallenge.value = null
@@ -1247,6 +1248,12 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
         val roomCode = generateComplexRoomCode()
         val stats = _userStats.value
         val myUid = authManager.currentUser.value?.uid ?: "player_${stats.userName.lowercase().replace(" ", "_")}"
+
+        initClassicGame(
+            mode = GameMode.PLAY_ONLINE,
+            forcedOpponentName = friendName,
+            forcedOpponentLevel = friendLevel
+        )
 
         _classicState.value = _classicState.value.copy(
             roomCode = roomCode,
@@ -1258,11 +1265,10 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
             gameMode = GameMode.PLAY_ONLINE,
             onlineStatusMessage = "⚡ Duel Arena ready with $friendName!"
         )
-        initClassicGame(
-            mode = GameMode.PLAY_ONLINE,
-            forcedOpponentName = friendName,
-            forcedOpponentLevel = friendLevel
-        )
+
+        if (skipSetup) {
+            proceedToNextSetupOrStartMatch()
+        }
         onStart()
     }
 

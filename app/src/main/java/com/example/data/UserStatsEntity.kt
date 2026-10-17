@@ -8,7 +8,8 @@ import com.example.model.UserStats
 @Entity(tableName = "user_stats")
 data class UserStatsEntity(
     @PrimaryKey val id: Int = 1,
-    val coins: Int = 500,
+    val coins: Int = 4850,
+    val gems: Int = 120,
     val level: Int = 1,
     val xp: Int = 0,
     val totalGamesPlayed: Int = 0,
@@ -38,6 +39,7 @@ data class UserStatsEntity(
 
         return UserStats(
             coins = coins,
+            gems = gems,
             level = level,
             xp = xp,
             totalGamesPlayed = totalGamesPlayed,
@@ -67,6 +69,7 @@ data class UserStatsEntity(
             return UserStatsEntity(
                 id = 1,
                 coins = stats.coins,
+                gems = stats.gems,
                 level = stats.level,
                 xp = stats.xp,
                 totalGamesPlayed = stats.totalGamesPlayed,

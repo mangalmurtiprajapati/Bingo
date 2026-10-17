@@ -116,6 +116,7 @@ fun OnlineLobbyScreen(
     onUpdateFriendLevel: (String, Int) -> Unit = { _, _ -> },
     onChallengeFriend: (FriendProfile) -> Unit = {},
     onSendCustomChallenge: (String, Int) -> Unit = { _, _ -> },
+    onStartCustomDuel: (String, Int) -> Unit = { _, _ -> },
     onAcceptChallenge: (FriendChallenge) -> Unit = {},
     onRejectChallenge: (FriendChallenge) -> Unit = {},
     onCancelOutgoingChallenge: () -> Unit = {},
@@ -1513,8 +1514,10 @@ Can you beat my brain strategy? Join now! 🎯⚡
                 } else if (isPending) {
                     Button(
                         onClick = {
+                            val targetName = outgoingChallenge.receiverName
+                            val targetLevel = outgoingChallenge.receiverLevel
                             onCancelOutgoingChallenge()
-                            onProceedToSetup()
+                            onStartCustomDuel(targetName, targetLevel)
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB300)),
                         shape = RoundedCornerShape(10.dp)
@@ -1602,11 +1605,10 @@ Can you beat my brain strategy? Join now! 🎯⚡
                             if (customTargetName.isNotBlank()) {
                                 val name = customTargetName.trim()
                                 val lvl = customTargetLevel
-                                onSendCustomChallenge(name, lvl)
                                 customTargetName = ""
                                 customTargetLevel = 1
                                 showCustomChallengeDialog = false
-                                onProceedToSetup()
+                                onStartCustomDuel(name, lvl)
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853)),

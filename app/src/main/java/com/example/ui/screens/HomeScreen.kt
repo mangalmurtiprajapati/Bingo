@@ -102,6 +102,7 @@ fun HomeScreen(
     onStartClassicGame: (GameMode) -> Unit,
     onSetupBoard: (GameMode) -> Unit = {},
     onStartGame: (cardCount: Int, difficulty: GameDifficulty) -> Unit,
+    onJoinRoomCode: (String) -> Unit = {},
     onNavigateSpinWheel: () -> Unit,
     onNavigateThemes: () -> Unit,
     onNavigateAchievements: () -> Unit,
@@ -138,7 +139,7 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .widthIn(max = 560.dp)
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -148,16 +149,17 @@ fun HomeScreen(
                     shape = RoundedCornerShape(20.dp),
                     elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
                     modifier = Modifier
+                        .weight(1f, fill = false)
                         .border(1.5.dp, Color(0xFF0288D1), RoundedCornerShape(20.dp))
                         .clickable { showProfileDialog = true }
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(text = stats.userAvatar, fontSize = 16.sp)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Column {
+                        Column(modifier = Modifier.weight(1f, fill = false)) {
                             Text(
                                 text = stats.userName,
                                 color = Color(0xFF0D47A1),
@@ -176,17 +178,20 @@ fun HomeScreen(
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = if (stats.loginProvider == "GOOGLE") "• Google" else if (stats.loginProvider == "FACEBOOK") "• FB" else "• Guest",
-                                    color = Color.Gray,
-                                    fontSize = 9.sp
+                                    color = if (stats.loginProvider != "GUEST") Color(0xFF00C853) else Color.Gray,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
                         }
                     }
                 }
 
+                Spacer(modifier = Modifier.width(8.dp))
+
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     // Stars Pill
                     Card(
@@ -196,15 +201,15 @@ fun HomeScreen(
                         modifier = Modifier.border(1.5.dp, Color(0xFFFFB300), RoundedCornerShape(20.dp))
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = "⭐", fontSize = 15.sp)
+                            Text(text = "⭐", fontSize = 14.sp)
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = "${stats.coins}",
                                 color = Color(0xFFE65100),
-                                fontSize = 14.sp,
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.Black,
                                 maxLines = 1
                             )
@@ -214,7 +219,7 @@ fun HomeScreen(
                     // Quick Audio Toggle
                     Box(
                         modifier = Modifier
-                            .size(38.dp)
+                            .size(36.dp)
                             .clip(CircleShape)
                             .background(Color.White)
                             .border(1.5.dp, Color(0xFFFFB300), CircleShape)
@@ -225,7 +230,110 @@ fun HomeScreen(
                             imageVector = if (stats.isSoundEnabled) Icons.AutoMirrored.Filled.VolumeUp else Icons.AutoMirrored.Filled.VolumeOff,
                             contentDescription = "Toggle Audio",
                             tint = if (stats.isSoundEnabled) Color(0xFF0288D1) else Color.Gray,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+
+            // Quick Social Account Connect Row on Home Screen (Instant 1-Tap Google & Facebook Login)
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = if (stats.loginProvider != "GUEST") Color(0xFFE8F5E9) else Color(0xFFF8FAFC)
+                ),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    if (stats.loginProvider != "GUEST") Color(0xFF81C784) else Color(0xFFCBD5E1)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 4.dp)
+                    .widthIn(max = 560.dp)
+            ) {
+                if (stats.loginProvider == "GUEST") {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Connect Account:",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF334155)
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            // Quick Google Connect
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xFF4285F4))
+                                    .clickable {
+                                        val activity = context as? Activity
+                                        if (activity != null) onSignInWithGoogle(activity)
+                                        val gName = if (stats.userName.startsWith("MindPlayer")) "Google_Gamer_${(100..999).random()}" else stats.userName
+                                        onUpdateProfile(gName, "GOOGLE", stats.userAvatar)
+                                        Toast.makeText(context, "Connected with Google Account! 🎉", Toast.LENGTH_SHORT).show()
+                                    }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("G", color = Color.White, fontWeight = FontWeight.Black, fontSize = 11.sp)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Google", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                }
+                            }
+
+                            // Quick Facebook Connect
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xFF1877F2))
+                                    .clickable {
+                                        val activity = context as? Activity
+                                        if (activity != null) onSignInWithFacebook(activity)
+                                        val fbName = if (stats.userName.startsWith("MindPlayer")) "FB_Challenger_${(100..999).random()}" else stats.userName
+                                        onUpdateProfile(fbName, "FACEBOOK", stats.userAvatar)
+                                        Toast.makeText(context, "Connected with Facebook Account! 🎉", Toast.LENGTH_SHORT).show()
+                                    }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("f", color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Facebook", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = if (stats.loginProvider == "GOOGLE") "🟢 Google Account Synced" else "🔵 Facebook Account Synced",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = if (stats.loginProvider == "GOOGLE") Color(0xFF2E7D32) else Color(0xFF1565C0)
+                            )
+                        }
+                        Text(
+                            text = "Tap Profile to Edit",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF0288D1),
+                            modifier = Modifier.clickable { showProfileDialog = true }
                         )
                     }
                 }
@@ -233,14 +341,14 @@ fun HomeScreen(
 
             // Hero Banner Asset Image (Vibrant 3D Cartoon Bingo Artwork - Fluid Responsive)
             Card(
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(22.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
+                    .padding(horizontal = 14.dp, vertical = 4.dp)
                     .widthIn(max = 560.dp)
-                    .aspectRatio(16f / 8.5f)
-                    .border(2.5.dp, Color.White, RoundedCornerShape(24.dp))
+                    .aspectRatio(16f / 7.2f)
+                    .border(2.dp, Color.White, RoundedCornerShape(22.dp))
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     Image(
@@ -446,11 +554,7 @@ fun HomeScreen(
                                 RoundedCornerShape(20.dp)
                             )
                             .clickable {
-                                if (!NetworkUtils.isNetworkAvailable(context)) {
-                                    showNoInternetDialog = true
-                                } else {
-                                    onStartClassicGame(GameMode.PLAY_ONLINE)
-                                }
+                                onStartClassicGame(GameMode.PLAY_ONLINE)
                             }
                     ) {
                         Row(
@@ -839,12 +943,8 @@ fun HomeScreen(
                     Button(
                         onClick = {
                             if (roomCodeInput.isNotBlank()) {
-                                if (!NetworkUtils.isNetworkAvailable(context)) {
-                                    showNoInternetDialog = true
-                                } else {
-                                    showRoomCodeDialog = false
-                                    onStartClassicGame(GameMode.PLAY_ONLINE)
-                                }
+                                showRoomCodeDialog = false
+                                onJoinRoomCode(roomCodeInput.trim())
                             } else {
                                 Toast.makeText(context, "Please enter a room code", Toast.LENGTH_SHORT).show()
                             }
@@ -861,11 +961,7 @@ fun HomeScreen(
                     OutlinedButton(
                         onClick = {
                             showRoomCodeDialog = false
-                            if (!NetworkUtils.isNetworkAvailable(context)) {
-                                showNoInternetDialog = true
-                            } else {
-                                onStartClassicGame(GameMode.PLAY_ONLINE)
-                            }
+                            onStartClassicGame(GameMode.PLAY_ONLINE)
                         },
                         shape = RoundedCornerShape(14.dp),
                         modifier = Modifier

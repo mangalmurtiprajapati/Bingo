@@ -1,7 +1,8 @@
 package com.example.model
 
 data class UserStats(
-    val coins: Int = 500, // Initial bonus coins
+    val coins: Int = 4850, // Arcade coin stash
+    val gems: Int = 120, // Arcade gems stash
     val level: Int = 1,
     val xp: Int = 0,
     val totalGamesPlayed: Int = 0,
