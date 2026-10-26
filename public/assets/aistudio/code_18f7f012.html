@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_tab" name="shell-type"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800;900&amp;family=Space+Grotesk:wght@700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "on-background": "#111c2d", "surface-variant": "#d8e3fb", "error-container": "#ffdad6", "on-tertiary-fixed-variant": "#8f003f", "secondary-container": "#ff9800", "surface-container-low": "#f0f3ff", "on-secondary": "#ffffff", "inverse-on-surface": "#ecf1ff", "on-primary-fixed": "#001d32", "on-surface": "#111c2d", "tertiary-fixed-dim": "#ffb1c1", "surface-container": "#e7eeff", "on-error-container": "#93000a", "surface-tint": "#00639a", "on-tertiary": "#ffffff", "secondary": "#8b5000", "primary-fixed": "#cee5ff", "on-primary": "#ffffff", "on-secondary-fixed-variant": "#693c00", "on-tertiary-container": "#fffbff", "tertiary-fixed": "#ffd9df", "surface-bright": "#f9f9ff", "primary": "#006096", "secondary-fixed": "#ffdcbe", "on-primary-container": "#fdfcff", "on-tertiary-fixed": "#3f0018", "surface-container-highest": "#d8e3fb", "inverse-primary": "#96ccff", "outline": "#707882", "secondary-fixed-dim": "#ffb870", "primary-fixed-dim": "#96ccff", "tertiary-container": "#dd2269", "surface-container-high": "#dee8ff", "on-secondary-container": "#653900", "on-secondary-fixed": "#2c1600", "primary-container": "#007abc", "surface-dim": "#cfdaf2", "inverse-surface": "#263143", "on-surface-variant": "#3f4851", "outline-variant": "#bfc7d2", "surface": "#f9f9ff", "error": "#ba1a1a", "tertiary": "#b70052", "background": "#f9f9ff", "on-error": "#ffffff", "surface-container-lowest": "#ffffff", "on-primary-fixed-variant": "#004a75" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "space-lg": "1rem", "gutter-mobile": "0.25rem", "space-md": "0.75rem", "space-xs": "0.25rem", "margin-tablet": "2rem", "space-sm": "0.5rem", "space-xl": "1.5rem", "margin": "1rem", "gutter": "0.375rem" }, "fontFamily": { "headline-md": ["Outfit"], "body-sm": ["Outfit"], "badge-micro": ["Space Grotesk"], "headline-lg": ["Outfit"], "grid-number-compact": ["Space Grotesk"], "display-hero": ["Outfit"], "display-hero-mobile": ["Outfit"], "grid-number": ["Space Grotesk"], "title-md": ["Outfit"], "label-caps": ["Space Grotesk"], "body-base": ["Outfit"] }, "fontSize": { "headline-md": ["20px", {"lineHeight": "26px", "fontWeight": "800"}], "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "500"}], "badge-micro": ["9px", {"lineHeight": "12px", "letterSpacing": "0.04em", "fontWeight": "700"}], "headline-lg": ["24px", {"lineHeight": "30px", "fontWeight": "800"}], "grid-number-compact": ["14px", {"lineHeight": "18px", "fontWeight": "700"}], "display-hero": ["36px", {"lineHeight": "44px", "fontWeight": "900"}], "display-hero-mobile": ["26px", {"lineHeight": "32px", "fontWeight": "900"}], "grid-number": ["18px", {"lineHeight": "22px", "fontWeight": "700"}], "title-md": ["18px", {"lineHeight": "24px", "fontWeight": "700"}], "label-caps": ["11px", {"lineHeight": "14px", "letterSpacing": "0.06em", "fontWeight": "700"}], "body-base": ["15px", {"lineHeight": "22px", "fontWeight": "500"}] } } } }</script><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-background font-body-base text-body-base text-on-surface flex flex-col min-h-screen"><header class="fixed top-0 inset-x-0 z-50 bg-surface/90 backdrop-blur-xl pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-16 px-space-md flex items-center justify-between gap-space-xs max-w-[560px] mx-auto"><div class="flex items-center gap-space-xs"><img alt="Arcade Bingo Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBBmhLbZqk89z7JuwEThHDeIfWsHFAFNT6jFsS8Yu2bSmzAUnBhgi_PzpTD9uy1xDaKqK2jNpkvn5vDTzwxDm71SvBa2vxeY1VrkbPrSmOBMp6MqoXYJ5RkSjnzZFq8PsDc7AdWLSdA9i3_pPwsiD1xsQTB2wdG0isoZKaIw_oWQMPoZYyh2fvarNE0KmHp_djcUE7Q3YkayBWEx8eBiGMhwQU433Jq7Hcn7cp1BhnCjXL0vEYqrYKa"/><span class="font-headline-md text-headline-md text-primary tracking-tight">Home</span></div><div class="flex items-center gap-space-xs"><div class="flex items-center gap-1 bg-surface-container-high px-space-xs py-1 rounded-full shadow-inner"><span class="material-symbols-outlined text-secondary-container text-[18px]">monetization_on</span><span class="font-badge-micro text-badge-micro text-on-surface font-bold">4,850</span></div><div class="flex items-center gap-1 bg-surface-container-high px-space-xs py-1 rounded-full shadow-inner"><span class="material-symbols-outlined text-tertiary text-[18px]">diamond</span><span class="font-badge-micro text-badge-micro text-on-surface font-bold">120</span></div><a class="w-11 h-11 flex items-center justify-center rounded-full text-on-surface-variant hover:text-on-surface transition-colors" data-path="how-to-play" href="#"><span class="material-symbols-outlined">help_outline</span></a><a class="w-11 h-11 flex items-center justify-center rounded-full text-on-surface-variant hover:text-on-surface transition-colors" data-path="player-stats" href="#"><img alt="Profile" class="w-8 h-8 rounded-full object-cover ring-2 ring-primary/20" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA6-x15a8nSi69AwoTHfLdpGa1oZjV9pIYqdgNisJKyKDRfWwiwvG8Y_hpTFSBdmBlj1E8bVNx45D4bUMUBRTdMjjrUVQknQKI8EFs4vK3vt9JhIoAuq-MGezAkBlFyBZvlHNliGC6lX9Ut50-7HjLbmEdv-p-aA3w9AQaFJ0kd82_dSFw1pZwAOPSJwa7InqRcBYcl2QXNbN4jNGyimvfsc1dsK6Aect9zAhFYrdiTBfMagIF5ftB3"/></a></div></div></header><main class="flex-1 flex flex-col relative w-full pt-16 pb-20 bg-background max-w-[560px] mx-auto px-space-md"><div class="flex flex-col w-full pb-6 space-y-4">
+<!-- Free Spin Ready Alert / Balance Status Ribbon -->
+<div class="bg-surface-container-high rounded-2xl p-space-md shadow-sm flex items-center justify-between">
+<div class="flex items-center space-x-space-sm min-w-0">
+<div class="relative w-11 h-11 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary shadow-md shrink-0">
+<span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">stars</span>
+<span class="absolute -top-1 -right-1 flex h-4 w-4">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-tertiary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-4 w-4 bg-tertiary border-2 border-surface text-on-tertiary text-[9px] font-bold items-center justify-center">1</span>
+</span>
+</div>
+<div class="truncate">
+<div class="flex items-center space-x-1">
+<span class="font-headline-md text-headline-md text-on-surface">Daily Fortune</span>
+<span class="bg-secondary-fixed text-on-secondary-fixed px-1.5 py-0.5 rounded-full font-badge-micro text-badge-micro uppercase tracking-wider">Free Ready</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Daily reset in <span class="font-bold text-primary">14h 22m</span></p>
+</div>
+</div>
+<button aria-label="Drop rates and odds info" class="flex items-center justify-center w-9 h-9 rounded-full bg-surface-container text-on-surface-variant hover:bg-surface-variant hover:text-on-surface transition-colors shrink-0" id="rulesBtn">
+<span class="material-symbols-outlined text-[20px]">info</span>
+</button>
+</div>
+<!-- Daily Streak & Multiplier Banner -->
+<div class="relative overflow-hidden rounded-2xl bg-inverse-surface text-inverse-on-surface p-space-md shadow-lg">
+<div class="flex items-center justify-between mb-space-sm">
+<div class="flex items-center space-x-space-xs">
+<span class="material-symbols-outlined text-secondary-fixed text-[24px] animate-bounce" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+<span class="font-headline-md text-headline-md text-secondary-fixed">5-Day Streak Active!</span>
+</div>
+<div class="bg-tertiary-container text-on-tertiary-container px-2 py-0.5 rounded-full font-badge-micro text-badge-micro font-bold shadow-sm">
+        2.5x MULTIPLIER
+      </div>
+</div>
+<p class="font-body-sm text-body-sm text-surface-container-high mb-space-md">Log in consecutive days to supercharge all wheel prize amounts.</p>
+<!-- 7-Day Dot Timeline -->
+<div class="grid grid-cols-7 gap-1.5 pt-1">
+<!-- Day 1 (Claimed) -->
+<div class="flex flex-col items-center space-y-1">
+<div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</div>
+<span class="font-label-caps text-label-caps text-surface-variant">D1</span>
+</div>
+<!-- Day 2 (Claimed) -->
+<div class="flex flex-col items-center space-y-1">
+<div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</div>
+<span class="font-label-caps text-label-caps text-surface-variant">D2</span>
+</div>
+<!-- Day 3 (Claimed) -->
+<div class="flex flex-col items-center space-y-1">
+<div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</div>
+<span class="font-label-caps text-label-caps text-surface-variant">D3</span>
+</div>
+<!-- Day 4 (Claimed) -->
+<div class="flex flex-col items-center space-y-1">
+<div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</div>
+<span class="font-label-caps text-label-caps text-surface-variant">D4</span>
+</div>
+<!-- Day 5 (Active Today) -->
+<div class="flex flex-col items-center space-y-1">
+<div class="relative w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center shadow-md ring-2 ring-primary-fixed">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">bolt</span>
+</div>
+<span class="font-label-caps text-label-caps text-primary-fixed-dim">TODAY</span>
+</div>
+<!-- Day 6 (Upcoming) -->
+<div class="flex flex-col items-center space-y-1 opacity-60">
+<div class="w-8 h-8 rounded-full bg-surface-container-high text-on-surface-variant flex items-center justify-center">
+<span class="font-badge-micro text-badge-micro text-inverse-on-surface">3x</span>
+</div>
+<span class="font-label-caps text-label-caps text-surface-variant">D6</span>
+</div>
+<!-- Day 7 (Milestone Crate) -->
+<div class="flex flex-col items-center space-y-1">
+<div class="w-8 h-8 rounded-full bg-tertiary text-on-tertiary flex items-center justify-center shadow-md animate-pulse">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">redeem</span>
+</div>
+<span class="font-label-caps text-label-caps text-tertiary-fixed">CHEST</span>
+</div>
+</div>
+</div>
+<!-- The Centerpiece: Rotating Lucky Wheel Canvas -->
+<div class="relative w-full aspect-square max-w-[380px] mx-auto flex items-center justify-center p-2 select-none">
+<!-- Outer Carnival Glow & Bulbs -->
+<div class="absolute inset-0 rounded-full bg-surface-container shadow-xl"></div>
+<div class="absolute inset-2 rounded-full bg-inverse-surface shadow-inner flex items-center justify-center">
+<!-- Carnival Rim Light Dots (16 Dots) -->
+<div class="absolute inset-0 rounded-full pointer-events-none">
+<div class="absolute top-2 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-secondary-fixed shadow-[0_0_8px_#ffdcbe] animate-pulse"></div>
+<div class="absolute bottom-2 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-secondary-fixed shadow-[0_0_8px_#ffdcbe] animate-pulse"></div>
+<div class="absolute left-2 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-secondary-fixed shadow-[0_0_8px_#ffdcbe] animate-pulse"></div>
+<div class="absolute right-2 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-secondary-fixed shadow-[0_0_8px_#ffdcbe] animate-pulse"></div>
+<div class="absolute top-8 left-8 w-2 h-2 rounded-full bg-surface-container-lowest"></div>
+<div class="absolute top-8 right-8 w-2 h-2 rounded-full bg-secondary-fixed"></div>
+<div class="absolute bottom-8 left-8 w-2 h-2 rounded-full bg-secondary-fixed"></div>
+<div class="absolute bottom-8 right-8 w-2 h-2 rounded-full bg-surface-container-lowest"></div>
+</div>
+<!-- Rotating Disk Container -->
+<div class="w-[90%] h-[90%] rounded-full relative transition-transform duration-[4500ms] cubic-bezier(0.12,0.8,0.33,1) shadow-2xl overflow-hidden" id="wheelDisk" style="transform: rotate(0deg);">
+<svg class="w-full h-full transform" viewbox="0 0 400 400">
+<defs>
+<lineargradient id="goldJackpot" x1="0%" x2="100%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#ffdcbe"></stop>
+<stop offset="50%" stop-color="#ff9800"></stop>
+<stop offset="100%" stop-color="#8b5000"></stop>
+</lineargradient>
+<lineargradient id="neonCyan" x1="0%" x2="100%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#96ccff"></stop>
+<stop offset="100%" stop-color="#006096"></stop>
+</lineargradient>
+<lineargradient id="arcadePink" x1="0%" x2="100%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#ffd9df"></stop>
+<stop offset="100%" stop-color="#b70052"></stop>
+</lineargradient>
+<lineargradient id="royalBlue" x1="0%" x2="100%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#007abc"></stop>
+<stop offset="100%" stop-color="#001d32"></stop>
+</lineargradient>
+<lineargradient id="emeraldTile" x1="0%" x2="100%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#d8e3fb"></stop>
+<stop offset="100%" stop-color="#3f4851"></stop>
+</lineargradient>
+</defs>
+<!-- 8 Segment Slices (45deg each) -->
+<!-- Segment 1: 0 - 45 deg (5,000 Coins) -->
+<path d="M 200,200 L 200,0 A 200,200 0 0,1 341.42,58.58 Z" fill="url(#neonCyan)"></path>
+<!-- Segment 2: 45 - 90 deg (50 Gems) -->
+<path d="M 200,200 L 341.42,58.58 A 200,200 0 0,1 400,200 Z" fill="url(#arcadePink)"></path>
+<!-- Segment 3: 90 - 135 deg (MYTHIC SKIN) -->
+<path d="M 200,200 L 400,200 A 200,200 0 0,1 341.42,341.42 Z" fill="url(#royalBlue)"></path>
+<!-- Segment 4: 135 - 180 deg (1,500 Coins) -->
+<path d="M 200,200 L 341.42,341.42 A 200,200 0 0,1 200,400 Z" fill="url(#emeraldTile)"></path>
+<!-- Segment 5: 180 - 225 deg (3x Booster) -->
+<path d="M 200,200 L 200,400 A 200,200 0 0,1 58.58,341.42 Z" fill="url(#arcadePink)"></path>
+<!-- Segment 6: 225 - 270 deg (JACKPOT 50,000) -->
+<path d="M 200,200 L 58.58,341.42 A 200,200 0 0,1 0,200 Z" fill="url(#goldJackpot)"></path>
+<!-- Segment 7: 270 - 315 deg (25 Gems) -->
+<path d="M 200,200 L 0,200 A 200,200 0 0,1 58.58,58.58 Z" fill="url(#neonCyan)"></path>
+<!-- Segment 8: 315 - 360 deg (Double XP) -->
+<path d="M 200,200 L 58.58,58.58 A 200,200 0 0,1 200,0 Z" fill="url(#royalBlue)"></path>
+<!-- Wedge Dividers & Accents -->
+<g opacity="0.3" stroke="#ffffff" stroke-width="2">
+<line x1="200" x2="200" y1="200" y2="0"></line>
+<line x1="200" x2="341.42" y1="200" y2="58.58"></line>
+<line x1="200" x2="400" y1="200" y2="200"></line>
+<line x1="200" x2="341.42" y1="200" y2="341.42"></line>
+<line x1="200" x2="200" y1="200" y2="400"></line>
+<line x1="200" x2="58.58" y1="200" y2="341.42"></line>
+<line x1="200" x2="0" y1="200" y2="200"></line>
+<line x1="200" x2="58.58" y1="200" y2="58.58"></line>
+</g>
+<!-- Prize Text & Icons along Wedges -->
+<g fill="#ffffff" font-family="Outfit" font-size="14" font-weight="900" text-anchor="middle">
+<!-- 1: 5k Coins (Angle: 22.5) -->
+<text transform="translate(200,200) rotate(22.5) translate(110,6)">5,000 🪙</text>
+<!-- 2: 50 Gems (Angle: 67.5) -->
+<text transform="translate(200,200) rotate(67.5) translate(110,6)">50 💎</text>
+<!-- 3: Dauber Skin (Angle: 112.5) -->
+<text fill="#ffd9df" transform="translate(200,200) rotate(112.5) translate(110,6)">SKIN ⚡</text>
+<!-- 4: 1.5k Coins (Angle: 157.5) -->
+<text transform="translate(200,200) rotate(157.5) translate(110,6)">1,500 💰</text>
+<!-- 5: 3x Crate (Angle: 202.5) -->
+<text transform="translate(200,200) rotate(202.5) translate(110,6)">BOOST 📦</text>
+<!-- 6: Jackpot (Angle: 247.5) -->
+<text fill="#2c1600" font-size="15" transform="translate(200,200) rotate(247.5) translate(110,6)">JACKPOT! 🌟</text>
+<!-- 7: 25 Gems (Angle: 292.5) -->
+<text transform="translate(200,200) rotate(292.5) translate(110,6)">25 💎</text>
+<!-- 8: 2x XP (Angle: 337.5) -->
+<text transform="translate(200,200) rotate(337.5) translate(110,6)">2X XP 🎟️</text>
+</g>
+</svg>
+</div>
+<!-- Center Hub Button & Golden Arcade Core -->
+<div class="absolute w-16 h-16 rounded-full bg-surface-container-lowest shadow-2xl flex items-center justify-center p-1.5 z-10">
+<div class="w-full h-full rounded-full bg-primary-container flex items-center justify-center text-on-primary-container shadow-inner">
+<span class="material-symbols-outlined text-[28px] animate-spin" style="animation-duration: 9s;">casino</span>
+</div>
+</div>
+</div>
+<!-- Center Pointer Peg (pointing downwards from top rim) -->
+<div class="absolute top-0 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center pointer-events-none drop-shadow-lg">
+<div class="w-6 h-6 rounded-full bg-secondary-container flex items-center justify-center shadow-md">
+<div class="w-2.5 h-2.5 rounded-full bg-surface-container-lowest"></div>
+</div>
+<div class="w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[18px] border-t-secondary-container -mt-1.5"></div>
+</div>
+</div>
+<!-- Prize Won Notification Banner (Revealed via JS) -->
+<div class="hidden bg-secondary-container text-on-secondary p-space-md rounded-2xl shadow-xl flex items-center justify-between" id="winBanner">
+<div class="flex items-center space-x-space-sm min-w-0">
+<span class="material-symbols-outlined text-[32px] shrink-0" style="font-variation-settings: 'FILL' 1;">celebration</span>
+<div class="truncate">
+<div class="font-headline-md text-headline-md leading-tight" id="winTitle">You Won 50,000 Coins!</div>
+<p class="font-body-sm text-body-sm opacity-95">Multiplier x2.5 added to your bank.</p>
+</div>
+</div>
+<button class="bg-surface-container-lowest text-on-surface px-4 py-2 rounded-full font-label-caps text-label-caps uppercase shrink-0 shadow-sm active:scale-95 transition-transform" id="claimWinBtn">
+      Claim
+    </button>
+</div>
+<!-- Spin Controls Section -->
+<div class="flex flex-col space-y-space-sm pt-2">
+<!-- Big Arcade Action Spin Button -->
+<button class="w-full h-[52px] bg-primary-container text-on-primary-container rounded-full font-label-caps text-label-caps uppercase tracking-wider flex items-center justify-center space-x-space-xs shadow-lg active:translate-y-0.5 transition-all" id="spinBtn">
+<span class="material-symbols-outlined text-[22px]">play_circle</span>
+<span class="text-base font-black">SPIN NOW! (FREE)</span>
+</button>
+<!-- Secondary Boost & Ad Spin Option -->
+<div class="grid grid-cols-2 gap-space-sm">
+<button class="bg-surface-container-high text-on-surface px-space-md py-space-sm rounded-xl font-label-caps text-label-caps uppercase flex items-center justify-center space-x-1.5 shadow-sm active:scale-98 transition-transform">
+<span class="material-symbols-outlined text-tertiary text-[18px]" style="font-variation-settings: 'FILL' 1;">diamond</span>
+<span>Super Spin (20 💎)</span>
+</button>
+<button class="bg-surface-container-high text-on-surface px-space-md py-space-sm rounded-xl font-label-caps text-label-caps uppercase flex items-center justify-center space-x-1.5 shadow-sm active:scale-98 transition-transform">
+<span class="material-symbols-outlined text-primary text-[18px]">smart_display</span>
+<span>Watch Ad (+1 Spin)</span>
+</button>
+</div>
+</div>
+<!-- Live Ticker & Big Winners Feed -->
+<div class="bg-surface-container-low rounded-2xl p-space-md shadow-sm space-y-2">
+<div class="flex items-center justify-between">
+<div class="flex items-center space-x-1.5">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary-container opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-secondary-container"></span>
+</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Recent Big Winners</span>
+</div>
+<span class="font-badge-micro text-badge-micro text-primary font-bold">LIVE FEED</span>
+</div>
+<div class="flex items-center space-x-space-sm bg-surface-container-lowest p-space-xs rounded-xl shadow-xs">
+<div class="w-8 h-8 rounded-full bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed text-sm font-bold shrink-0">
+        ⚡
+      </div>
+<div class="min-w-0 flex-1">
+<p class="font-body-sm text-body-sm text-on-surface truncate">
+<span class="font-bold">@ViperX</span> landed <span class="text-secondary font-bold">50,000 Coins Jackpot</span>
+</p>
+<p class="font-badge-micro text-badge-micro text-on-surface-variant">2 minutes ago</p>
+</div>
+</div>
+</div>
+<!-- Rules & Drop Rates Drawer (Modal Accordion) -->
+<div class="hidden bg-surface-container rounded-2xl p-space-md shadow-sm space-y-3" id="dropRatesCard">
+<div class="flex items-center justify-between">
+<h3 class="font-headline-md text-headline-md text-on-surface">Drop Rates &amp; Odds</h3>
+<button class="text-on-surface-variant hover:text-on-surface" id="closeRulesBtn">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<div class="space-y-2 text-on-surface-variant font-body-sm text-body-sm">
+<div class="flex justify-between items-center py-1">
+<span class="flex items-center gap-1.5 text-on-surface font-medium">
+<span class="w-2.5 h-2.5 rounded-full bg-secondary-container"></span> Mega Jackpot (50k)
+        </span>
+<span class="font-grid-number-compact text-grid-number-compact text-on-surface">1.5%</span>
+</div>
+<div class="flex justify-between items-center py-1">
+<span class="flex items-center gap-1.5 text-on-surface font-medium">
+<span class="w-2.5 h-2.5 rounded-full bg-primary-container"></span> Mythic Skin ("Cyber Neon")
+        </span>
+<span class="font-grid-number-compact text-grid-number-compact text-on-surface">3.5%</span>
+</div>
+<div class="flex justify-between items-center py-1">
+<span class="flex items-center gap-1.5 text-on-surface font-medium">
+<span class="w-2.5 h-2.5 rounded-full bg-tertiary"></span> Premium Gems (25-50 💎)
+        </span>
+<span class="font-grid-number-compact text-grid-number-compact text-on-surface">20.0%</span>
+</div>
+<div class="flex justify-between items-center py-1">
+<span class="flex items-center gap-1.5 text-on-surface font-medium">
+<span class="w-2.5 h-2.5 rounded-full bg-surface-variant"></span> Booster Crates &amp; XP Tickets
+        </span>
+<span class="font-grid-number-compact text-grid-number-compact text-on-surface">25.0%</span>
+</div>
+<div class="flex justify-between items-center py-1">
+<span class="flex items-center gap-1.5 text-on-surface font-medium">
+<span class="w-2.5 h-2.5 rounded-full bg-outline-variant"></span> Arcade Coins (1.5k - 5k)
+        </span>
+<span class="font-grid-number-compact text-grid-number-compact text-on-surface">50.0%</span>
+</div>
+</div>
+</div>
+</div>
+<script>
+  (function() {
+    const wheel = document.getElementById('wheelDisk');
+    const spinBtn = document.getElementById('spinBtn');
+    const winBanner = document.getElementById('winBanner');
+    const winTitle = document.getElementById('winTitle');
+    const claimBtn = document.getElementById('claimWinBtn');
+    const rulesBtn = document.getElementById('rulesBtn');
+    const dropRatesCard = document.getElementById('dropRatesCard');
+    const closeRulesBtn = document.getElementById('closeRulesBtn');
+
+    let currentRotation = 0;
+    let isSpinning = false;
+
+    // Segment mappings: 8 segments, 45 degrees each
+    const prizes = [
+      { name: "5,000 Coins 🪙", angle: 22.5 },
+      { name: "50 Gems 💎", angle: 67.5 },
+      { name: "Cyber Neon Skin ⚡", angle: 112.5 },
+      { name: "1,500 Coins 💰", angle: 157.5 },
+      { name: "3x Booster Crate 📦", angle: 202.5 },
+      { name: "JACKPOT 50,000 Coins! 🌟", angle: 247.5 },
+      { name: "25 Gems 💎", angle: 292.5 },
+      { name: "2X XP Ticket 🎟️", angle: 337.5 }
+    ];
+
+    if (spinBtn && wheel) {
+      spinBtn.addEventListener('click', function() {
+        if (isSpinning) return;
+        isSpinning = true;
+        winBanner.classList.add('hidden');
+
+        spinBtn.classList.add('opacity-50', 'pointer-events-none');
+
+        // Choose a random winning wedge
+        const targetIndex = Math.floor(Math.random() * prizes.length);
+        const prize = prizes[targetIndex];
+
+        // 360 - angle aligns chosen segment directly beneath the top pointer peg
+        const targetDeg = (360 - prize.angle);
+        const extraRounds = 360 * 5; // 5 full revolutions for tension
+        currentRotation += extraRounds + (targetDeg - (currentRotation % 360) + 360);
+
+        wheel.style.transform = `rotate(${currentRotation}deg)`;
+
+        setTimeout(() => {
+          isSpinning = false;
+          winTitle.textContent = `You Won ${prize.name}`;
+          winBanner.classList.remove('hidden');
+          spinBtn.innerHTML = `
+            <span class="material-symbols-outlined text-[20px]">timer</span>
+            <span class="text-base font-black">NEXT FREE SPIN: 23H 59M</span>
+          `;
+        }, 4600);
+      });
+    }
+
+    if (claimBtn) {
+      claimBtn.addEventListener('click', function() {
+        winBanner.classList.add('hidden');
+      });
+    }
+
+    if (rulesBtn && dropRatesCard) {
+      rulesBtn.addEventListener('click', function() {
+        dropRatesCard.classList.toggle('hidden');
+      });
+    }
+
+    if (closeRulesBtn && dropRatesCard) {
+      closeRulesBtn.addEventListener('click', function() {
+        dropRatesCard.classList.add('hidden');
+      });
+    }
+  })();
+</script></main><nav class="fixed bottom-0 inset-x-0 z-50 pb-safe bg-surface/90 backdrop-blur-xl shadow-[0_-1px_8px_rgba(0,0,0,0.04)]" data-active-classes="text-primary font-bold"><div class="flex justify-around items-center h-16 max-w-[560px] mx-auto px-space-xs"><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] text-on-surface-variant transition-colors" data-path="home" href="#"><span class="material-symbols-outlined text-[24px]">cottage</span><span class="font-label-caps text-label-caps uppercase">Home</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] text-on-surface-variant transition-colors" data-path="online-lobby" href="#"><span class="material-symbols-outlined text-[24px]">groups</span><span class="font-label-caps text-label-caps uppercase">Lobby</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] text-on-surface-variant transition-colors" data-path="spin-wheel" href="#"><span class="material-symbols-outlined text-[24px]">casino</span><span class="font-label-caps text-label-caps uppercase">Spin</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] text-on-surface-variant transition-colors" data-path="themes-shop" href="#"><span class="material-symbols-outlined text-[24px]">storefront</span><span class="font-label-caps text-label-caps uppercase">Shop</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] text-on-surface-variant transition-colors" data-path="badges" href="#"><span class="material-symbols-outlined text-[24px]">military_tech</span><span class="font-label-caps text-label-caps uppercase">Badges</span></a></div></nav></body></html>

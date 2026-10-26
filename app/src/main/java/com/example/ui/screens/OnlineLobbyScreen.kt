@@ -5,10 +5,15 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
-import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,7 +25,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -29,48 +33,30 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MeetingRoom
-import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.MilitaryTech
+import androidx.compose.material.icons.filled.PersonPinCircle
+import androidx.compose.material.icons.filled.Pin
+import androidx.compose.material.icons.filled.Radar
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Sms
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Wifi
-import androidx.compose.material.icons.filled.WifiOff
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -80,24 +66,51 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.example.model.BingoTheme
-import com.example.model.ChallengeStatus
 import com.example.model.FriendChallenge
 import com.example.model.FriendProfile
 import com.example.model.OnlinePlayer
-import com.example.util.NetworkUtils
+import com.example.ui.components.ArcadeBottomNavigationBar
+import com.example.ui.components.ArcadeTopHeader
+import com.example.ui.theme.ArcadeBackground
+import com.example.ui.theme.ArcadeInverseOnSurface
+import com.example.ui.theme.ArcadeInverseSurface
+import com.example.ui.theme.ArcadeOnPrimary
+import com.example.ui.theme.ArcadeOnSecondary
+import com.example.ui.theme.ArcadeOnSurface
+import com.example.ui.theme.ArcadeOnSurfaceVariant
+import com.example.ui.theme.ArcadeOutlineVariant
+import com.example.ui.theme.ArcadePrimary
+import com.example.ui.theme.ArcadePrimaryContainer
+import com.example.ui.theme.ArcadePrimaryFixed
+import com.example.ui.theme.ArcadeSecondary
+import com.example.ui.theme.ArcadeSecondaryContainer
+import com.example.ui.theme.ArcadeSecondaryFixed
+import com.example.ui.theme.ArcadeSurfaceContainer
+import com.example.ui.theme.ArcadeSurfaceContainerHigh
+import com.example.ui.theme.ArcadeSurfaceContainerHighest
+import com.example.ui.theme.ArcadeSurfaceContainerLowest
+import com.example.ui.theme.ArcadeTertiary
+import com.example.ui.theme.ArcadeTertiaryContainer
+import com.example.ui.theme.ArcadeTertiaryFixed
+import com.example.ui.theme.EmeraldWin
+import com.example.ui.theme.TournamentGold
 import com.example.viewmodel.ClassicMatchState
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OnlineLobbyScreen(
     state: ClassicMatchState,
@@ -124,708 +137,510 @@ fun OnlineLobbyScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    var joinCodeInput by remember { mutableStateOf("") }
-    var isOnlineConnected by remember { mutableStateOf(NetworkUtils.isNetworkAvailable(context)) }
-    var networkTypeName by remember { mutableStateOf(NetworkUtils.getNetworkTypeName(context)) }
+    BackHandler { onBack() }
 
-    var showAddFriendDialog by remember { mutableStateOf(false) }
-    var showCustomChallengeDialog by remember { mutableStateOf(false) }
-    var showShareDialog by remember { mutableStateOf(false) }
-    var newFriendName by remember { mutableStateOf("") }
-    var newFriendLevel by remember { mutableIntStateOf(1) }
-    var customTargetName by remember { mutableStateOf("") }
-    var customTargetLevel by remember { mutableIntStateOf(1) }
-    var selectedFriendForChallenge by remember { mutableStateOf<FriendProfile?>(null) }
+    var selectedTab by remember { mutableStateOf("ranked") } // "ranked", "private", "online"
+    var pinInputValue by remember { mutableStateOf("") }
+    var lobbyFormat by remember { mutableStateOf("1v1") }
+    var dropSpeed by remember { mutableStateOf("15s") }
+    var showChallengeModal by remember { mutableStateOf(false) }
+    var challengeTargetName by remember { mutableStateOf("") }
+    var challengeTargetRank by remember { mutableStateOf("") }
 
-    // Intercept hardware and gesture back button to cancel search and navigate safely
-    BackHandler {
-        onCancelSearch()
-        onBack()
-    }
+    val activeRoomCode = state.roomCode ?: "7842"
 
-    fun refreshNetwork() {
-        isOnlineConnected = NetworkUtils.isNetworkAvailable(context)
-        networkTypeName = NetworkUtils.getNetworkTypeName(context)
-    }
-
-    fun copyRoomCodeOnly(roomCode: String) {
-        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val clip = ClipData.newPlainText("Bingo Room Code", roomCode)
-        clipboard.setPrimaryClip(clip)
-        Toast.makeText(context, "Room Code #$roomCode copied! Send to your friend.", Toast.LENGTH_SHORT).show()
-    }
-
-    fun shareChallengeViaWhatsApp(roomCode: String, level: Int, friendName: String? = null) {
-        val targetName = friendName?.let { " $it" } ?: ""
-        val message = """
-🎮 *KIDS MIND BINGO 5x5 DUEL!* 🧠✨
-
-Hey$targetName! I have challenged you to a mind-sharpening 5x5 BINGO match!
-
-🏆 *Challenge Level:* Level $level
-🔑 *Room Code:* *$roomCode*
-
-👉 *How to play together:*
-1. Open *Kids Mind Bingo* app
-2. Go to 'Play Online'
-3. Enter Room Code: *$roomCode*
-4. Fill your 1-25 board and let's see who completes 5 lines first!
-
-Can you beat my brain strategy? Join now! 🎯⚡
-        """.trimIndent()
-
-        val whatsappIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, message)
-            setPackage("com.whatsapp")
-        }
-        try {
-            context.startActivity(whatsappIntent)
-        } catch (_: Exception) {
-            // WhatsApp not installed, copy to clipboard instead of opening Bluetooth Quick Share chooser
-            copyRoomCodeOnly(roomCode)
-            showShareDialog = true
-        }
-    }
-
-    fun shareChallengeViaSms(roomCode: String, level: Int) {
-        val message = "Play 5x5 Kids Mind Bingo with me! Room Code: #$roomCode (Level $level). Open app and tap Play Online -> Enter Room Code!"
-        try {
-            val smsIntent = Intent(Intent.ACTION_VIEW).apply {
-                data = Uri.parse("sms:")
-                putExtra("sms_body", message)
-            }
-            context.startActivity(smsIntent)
-        } catch (_: Exception) {
-            copyRoomCodeOnly(roomCode)
-        }
-    }
-
-    fun shareChallengeGeneral(roomCode: String, level: Int) {
-        // Open custom in-app share dialog to prevent getting stuck in Android Bluetooth Quick Share!
-        showShareDialog = true
-    }
+    // Infinite animation for live radar sweep
+    val infiniteTransition = rememberInfiniteTransition(label = "radar")
+    val radarAngle by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2800, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "radarAngle"
+    )
 
     Scaffold(
-        containerColor = theme.backgroundGradients.first(),
+        modifier = Modifier.fillMaxSize(),
+        containerColor = ArcadeBackground,
         topBar = {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            "Play Online Multiplayer 🌐",
-                            fontWeight = FontWeight.Black,
-                            fontSize = 18.sp,
-                            color = Color.White
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = {
-                        onCancelSearch()
-                        onBack()
-                    }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = Color.White
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = {
-                        onCancelSearch()
-                        onBack()
-                    }) {
-                        Icon(
-                            Icons.Default.Home,
-                            contentDescription = "Home",
-                            tint = Color.White
-                        )
-                    }
-                    IconButton(onClick = { refreshNetwork() }) {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = "Refresh Network",
-                            tint = Color.White
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = theme.headerBgGradients.first()
-                )
+            ArcadeTopHeader(
+                title = "Online Lobby",
+                subtitle = "Matchmaking & Rooms",
+                onBack = onBack
+            )
+        },
+        bottomBar = {
+            ArcadeBottomNavigationBar(
+                currentRoute = "online_lobby",
+                onNavigate = { route ->
+                    if (route == "home") onBack()
+                }
             )
         }
-    ) { paddingValues ->
-        Box(
+    ) { innerPadding ->
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .background(Brush.verticalGradient(theme.backgroundGradients))
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .imePadding()
-                    .navigationBarsPadding()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
-                    .widthIn(max = 560.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                    .fillMaxWidth()
+                    .widthIn(max = 560.dp)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // User Profile & Status Card (Clean, high-contrast, modern)
-                Card(
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                    modifier = Modifier.fillMaxWidth()
+                // 1. Mode Quick Tabs
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    color = ArcadeSurfaceContainerHigh
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                            .padding(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFFE0F2FE)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("👤", fontSize = 22.sp)
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(
-                                    currentUserName,
-                                    color = Color(0xFF0F172A),
-                                    fontWeight = FontWeight.Black,
-                                    fontSize = 15.sp,
-                                    maxLines = 1
-                                )
-                                Text(
-                                    "ID: ${currentUserId.take(10).ifEmpty { "guest" }}",
-                                    color = Color(0xFF0288D1),
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                        Button(
-                            onClick = { showCustomChallengeDialog = true },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB300)),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.height(38.dp),
-                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                        ) {
-                            Text("CHALLENGE ⚔️", fontWeight = FontWeight.Black, fontSize = 11.sp, color = Color(0xFF1A0033))
-                        }
+                        LobbyTabPill(
+                            label = "Ranked",
+                            icon = Icons.Default.Radar,
+                            isSelected = selectedTab == "ranked",
+                            modifier = Modifier.weight(1f),
+                            onClick = { selectedTab = "ranked" }
+                        )
+                        LobbyTabPill(
+                            label = "Private",
+                            icon = Icons.Default.Lock,
+                            isSelected = selectedTab == "private",
+                            modifier = Modifier.weight(1f),
+                            onClick = { selectedTab = "private" }
+                        )
+                        LobbyTabPill(
+                            label = "Online",
+                            icon = Icons.Default.PersonPinCircle,
+                            isSelected = selectedTab == "online",
+                            modifier = Modifier.weight(1f),
+                            onClick = { selectedTab = "online" }
+                        )
                     }
                 }
 
-                // Incoming Challenges from Friends (Real-Time Firestore Alerts)
-                incomingChallenges.forEach { challenge ->
+                // TAB 1: Fast Matchmaking Radar Card
+                if (selectedTab == "ranked") {
                     Card(
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1B4B)),
-                        border = BorderStroke(2.dp, Color(0xFFFFD700)),
-                        elevation = CardDefaults.cardElevation(8.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .shadow(3.dp, RoundedCornerShape(18.dp)),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = ArcadeSurfaceContainer)
                     ) {
                         Column(
-                            modifier = Modifier.padding(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Row(
-                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
-                                modifier = Modifier.fillMaxWidth()
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("🚨", fontSize = 22.sp)
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        "INCOMING DUEL CHALLENGE!",
-                                        fontWeight = FontWeight.Black,
-                                        fontSize = 14.sp,
-                                        color = Color(0xFFFFD700)
-                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .clip(CircleShape)
+                                            .background(ArcadeSecondaryContainer),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.MilitaryTech,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Text(
+                                            text = "RANKED SEASON 4",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = ArcadePrimary
+                                        )
+                                        Text(
+                                            text = "1v1 Pulse Duel",
+                                            fontSize = 17.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = ArcadeOnSurface
+                                        )
+                                    }
                                 }
+
                                 Box(
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(Color(0xFFFF3D00).copy(alpha = 0.25f))
-                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(ArcadeSurfaceContainerLowest)
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
-                                    Text("PENDING", color = Color(0xFFFF8A80), fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(6.dp)
+                                                .clip(CircleShape)
+                                                .background(EmeraldWin)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = "24ms • 60 FPS",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = ArcadeOnSurface
+                                        )
+                                    }
                                 }
                             }
 
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth()
+                            // Live Radar Graphic
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(ArcadeSurfaceContainerLowest)
+                                    .padding(vertical = 24.dp),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(44.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFF6366F1)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(challenge.senderAvatar.ifEmpty { "⚔️" }, fontSize = 22.sp)
-                                }
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Column(modifier = Modifier.weight(1f)) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Box(
+                                        modifier = Modifier.size(140.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        // Concentric Rings
+                                        Canvas(modifier = Modifier.fillMaxSize()) {
+                                            val center = Offset(size.width / 2f, size.height / 2f)
+                                            drawCircle(
+                                                color = ArcadePrimary.copy(alpha = 0.1f),
+                                                radius = size.width * 0.48f,
+                                                style = Stroke(width = 1.5.dp.toPx())
+                                            )
+                                            drawCircle(
+                                                color = ArcadePrimary.copy(alpha = 0.15f),
+                                                radius = size.width * 0.32f,
+                                                style = Stroke(width = 1.5.dp.toPx())
+                                            )
+                                            drawCircle(
+                                                color = ArcadePrimary.copy(alpha = 0.2f),
+                                                radius = size.width * 0.18f,
+                                                style = Stroke(width = 1.5.dp.toPx())
+                                            )
+                                        }
+
+                                        // Rotating Radar Sweep
+                                        Canvas(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .rotate(radarAngle)
+                                        ) {
+                                            val center = Offset(size.width / 2f, size.height / 2f)
+                                            drawLine(
+                                                color = ArcadePrimaryContainer,
+                                                start = center,
+                                                end = Offset(center.x, 0f),
+                                                strokeWidth = 2.dp.toPx()
+                                            )
+                                        }
+
+                                        // Center Gamer Avatar Orb
+                                        Box(
+                                            modifier = Modifier
+                                                .size(54.dp)
+                                                .clip(CircleShape)
+                                                .background(ArcadePrimary),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(text = "👑", fontSize = 24.sp)
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(12.dp))
                                     Text(
-                                        "${challenge.senderName} (Level ${challenge.senderLevel})",
-                                        fontWeight = FontWeight.Black,
-                                        fontSize = 14.sp,
-                                        color = Color.White
+                                        text = if (state.isOnlineSearching) "Searching Opponent..." else "Ready for Ranked Match",
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = ArcadeOnSurface
                                     )
-                                    Text(
-                                        "Challenged you to a 5x5 Mind Bingo duel! Room #${challenge.roomCode}",
-                                        fontSize = 12.sp,
-                                        color = Color(0xFFE0E7FF)
-                                    )
+
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(top = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = "Est. wait: 3-5s",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = ArcadeOnSurfaceVariant
+                                        )
+                                        Text(text = "•", color = ArcadeOutlineVariant)
+                                        Text(
+                                            text = "Gold II (1,840 RP)",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = ArcadePrimary
+                                        )
+                                    }
                                 }
                             }
 
+                            // Actions
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 Button(
-                                    onClick = { onAcceptChallenge(challenge) },
-                                    modifier = Modifier.weight(1f).height(44.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                                    shape = RoundedCornerShape(12.dp)
+                                    onClick = onQuickMatch,
+                                    colors = ButtonDefaults.buttonColors(containerColor = ArcadePrimary),
+                                    shape = RoundedCornerShape(24.dp),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(48.dp)
+                                        .testTag("instant_quick_match_btn")
                                 ) {
-                                    Text("ACCEPT DUEL ⚔️", fontWeight = FontWeight.Black, color = Color.White)
-                                }
-                                OutlinedButton(
-                                    onClick = { onRejectChallenge(challenge) },
-                                    modifier = Modifier.weight(0.8f).height(44.dp),
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF8A80)),
-                                    border = BorderStroke(1.dp, Color(0xFFFF8A80)),
-                                    shape = RoundedCornerShape(12.dp)
-                                ) {
-                                    Text("DECLINE 🛡️", fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // 1. Network / Connectivity Status Bar
-                if (isOnlineConnected) {
-                    Card(
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF0FDF4)),
-                        border = BorderStroke(1.dp, Color(0xFF86EFAC)),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFFDCFCE7)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    Icons.Default.Wifi,
-                                    contentDescription = "Online",
-                                    tint = Color(0xFF16A34A),
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    "Connected: $networkTypeName",
-                                    color = Color(0xFF14532D),
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    "Real-Time Matchmaking Ready",
-                                    color = Color(0xFF16A34A),
-                                    fontSize = 11.sp
-                                )
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(Color(0xFF16A34A))
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
-                            ) {
-                                Text(
-                                    "ONLINE",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Black,
-                                    fontSize = 10.sp
-                                )
-                            }
-                        }
-                    }
-                } else {
-                    Card(
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFB71C1C)),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { refreshNetwork() }
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Default.WifiOff,
-                                contentDescription = "Offline",
-                                tint = Color(0xFFFF8A80),
-                                modifier = Modifier.size(28.dp)
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    "⚠️ Wi-Fi / Mobile Internet Required!",
-                                    color = Color.White,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Black
-                                )
-                                Text(
-                                    "Please turn on Wi-Fi or Mobile Data to play online. Tap to retry.",
-                                    color = Color(0xFFFFCDD2),
-                                    fontSize = 11.sp
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // 2. Quick Match (1 vs 1) with 5 to 10 Seconds Matchmaking
-                Card(
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = theme.cardBgColor),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFF00E676).copy(alpha = 0.2f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(Icons.Default.Public, contentDescription = null, tint = Color(0xFF00E676))
-                            }
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column {
-                                Text(
-                                    "Quick Match (1 vs 1 Duel) ⚡",
-                                    fontWeight = FontWeight.Black,
-                                    fontSize = 16.sp,
-                                    color = theme.textPrimary
-                                )
-                                Text(
-                                    "Matchmaking in 5 - 10 seconds with active players",
-                                    fontSize = 11.sp,
-                                    color = theme.textPrimary.copy(alpha = 0.75f)
-                                )
-                            }
-                        }
-
-                        if (state.isOnlineSearching) {
-                            // Active Searching State
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(Color.Black.copy(alpha = 0.25f))
-                                    .padding(14.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    CircularProgressIndicator(
-                                        color = Color(0xFFFFD700),
-                                        strokeWidth = 3.dp,
-                                        modifier = Modifier.size(36.dp)
+                                    Icon(
+                                        imageVector = Icons.Default.Bolt,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(18.dp)
                                     )
+                                    Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        state.onlineStatusMessage,
-                                        color = Color(0xFFFFD700),
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp,
-                                        textAlign = TextAlign.Center
-                                    )
-                                    LinearProgressIndicator(
-                                        progress = { (state.onlineSearchElapsedSec / 5f).coerceIn(0f, 1f) },
-                                        color = Color(0xFFFFD700),
-                                        trackColor = Color.White.copy(alpha = 0.2f),
-                                        modifier = Modifier
-                                            .fillMaxWidth(0.8f)
-                                            .height(6.dp)
-                                            .clip(RoundedCornerShape(3.dp))
-                                    )
-                                    Text(
-                                        text = if (state.onlineSearchElapsedSec < 5) {
-                                            "⏱️ Real Player Search: ${5 - state.onlineSearchElapsedSec}s remaining"
-                                        } else {
-                                            "⚡ Starting duel arena now!"
-                                        },
-                                        color = Color.White.copy(alpha = 0.9f),
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 12.sp
-                                    )
-
-                                    Row(
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        OutlinedButton(
-                                            onClick = onCancelSearch,
-                                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF8A80)),
-                                            shape = RoundedCornerShape(10.dp)
-                                        ) {
-                                            Text("Cancel Search", fontSize = 12.sp)
-                                        }
-
-                                        Button(
-                                            onClick = {
-                                                onCancelSearch()
-                                                onBack()
-                                            },
-                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
-                                            shape = RoundedCornerShape(10.dp)
-                                        ) {
-                                            Text("Go Home 🏠", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
-                                        }
-                                    }
-                                }
-                            }
-                        } else {
-                            Text(
-                                "Auto-pairs you with a smart kid or friend online for an exciting 5x5 mind game!",
-                                fontSize = 12.sp,
-                                color = theme.textPrimary.copy(alpha = 0.8f)
-                            )
-
-                            Button(
-                                onClick = {
-                                    refreshNetwork()
-                                    if (isOnlineConnected) {
-                                        onQuickMatch()
-                                    } else {
-                                        Toast.makeText(context, "Please connect to Wi-Fi or Mobile Network first!", Toast.LENGTH_LONG).show()
-                                    }
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(48.dp)
-                                    .testTag("quick_match_button"),
-                                colors = ButtonDefaults.buttonColors(containerColor = theme.primaryColor),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Icon(Icons.Default.PlayArrow, contentDescription = null)
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("FIND ONLINE MATCH NOW", fontWeight = FontWeight.Black)
-                            }
-                        }
-                    }
-                }
-
-                // 3. Create Challenge for Friends & WhatsApp Sharing
-                Card(
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = theme.cardBgColor),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFFFFB300).copy(alpha = 0.2f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(Icons.Default.EmojiEvents, contentDescription = null, tint = Color(0xFFFFB300))
-                            }
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column {
-                                Text(
-                                    "Challenge a Friend (WhatsApp / Link) 🏆",
-                                    fontWeight = FontWeight.Black,
-                                    fontSize = 15.sp,
-                                    color = theme.textPrimary
-                                )
-                                Text(
-                                    "Create custom level challenge & send room code",
-                                    fontSize = 11.sp,
-                                    color = theme.textPrimary.copy(alpha = 0.75f)
-                                )
-                            }
-                        }
-
-                        // Challenge Level Picker (1 to 5)
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(
-                                "Choose Challenge Level: Level ${state.challengeLevel}",
-                                fontWeight = FontWeight.Black,
-                                fontSize = 13.sp,
-                                color = Color(0xFF0F172A)
-                            )
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                for (lvl in 1..5) {
-                                    val isSelected = state.challengeLevel == lvl
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(if (isSelected) Color(0xFFFFB300) else Color(0xFFF1F5F9))
-                                            .border(
-                                                width = if (isSelected) 1.5.dp else 1.dp,
-                                                color = if (isSelected) Color(0xFFFF8F00) else Color(0xFFCBD5E1),
-                                                shape = RoundedCornerShape(8.dp)
-                                            )
-                                            .clickable { onSetChallengeLevel(lvl) }
-                                            .padding(vertical = 8.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            "Lvl $lvl",
-                                            fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
-                                            fontSize = 12.sp,
-                                            color = if (isSelected) Color(0xFF1A0033) else Color(0xFF334155)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        // Room Code Box: Generate unique code when user creates room or challenges friend!
-                        if (state.roomCode.isBlank()) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(Color(0xFF0F172A))
-                                    .border(1.5.dp, Color(0xFFFFD700).copy(alpha = 0.3f), RoundedCornerShape(14.dp))
-                                    .padding(14.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Text(
-                                        "Generate a secure unique room code for your private match:",
+                                        text = "INSTANT QUICK MATCH",
                                         fontSize = 12.sp,
-                                        color = Color(0xFF94A3B8),
-                                        textAlign = TextAlign.Center
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color.White
                                     )
-                                    Button(
-                                        onClick = { onCreateRoom() },
-                                        shape = RoundedCornerShape(12.dp),
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD700)),
-                                        modifier = Modifier.fillMaxWidth().height(46.dp)
-                                    ) {
-                                        Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFF1A0033))
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            "GENERATE UNIQUE ROOM CODE 🔑",
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Black,
-                                            color = Color(0xFF1A0033)
-                                        )
-                                    }
+                                }
+
+                                Button(
+                                    onClick = onCancelSearch,
+                                    colors = ButtonDefaults.buttonColors(containerColor = ArcadeSurfaceContainerHigh),
+                                    shape = RoundedCornerShape(24.dp),
+                                    modifier = Modifier.height(48.dp)
+                                ) {
+                                    Text("Cancel", color = ArcadeOnSurface, fontWeight = FontWeight.Bold)
                                 }
                             }
-                        } else {
-                            Box(
+                        }
+                    }
+                }
+
+                // TAB 2: Private Room (Host & Join)
+                if (selectedTab == "private") {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        // Host Private Room Card
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = CardDefaults.cardColors(containerColor = ArcadeSurfaceContainerLowest),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        ) {
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(Color(0xFF0F172A))
-                                    .border(1.5.dp, Color(0xFFFFD700).copy(alpha = 0.8f), RoundedCornerShape(14.dp))
-                                    .padding(12.dp)
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            "Your Unique Room Code (Alphanumeric):",
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = Color(0xFF94A3B8)
-                                        )
-                                        Text(
-                                            "#${state.roomCode}",
-                                            fontSize = 24.sp,
-                                            fontWeight = FontWeight.Black,
-                                            color = Color(0xFFFFD700)
-                                        )
-                                    }
-
-                                    Row(
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        IconButton(
-                                            onClick = {
-                                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                                val clip = ClipData.newPlainText("Bingo Room Code", state.roomCode)
-                                                clipboard.setPrimaryClip(clip)
-                                                Toast.makeText(context, "Room Code #${state.roomCode} copied!", Toast.LENGTH_SHORT).show()
-                                            }
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .clip(CircleShape)
+                                                .background(ArcadePrimaryFixed),
+                                            contentAlignment = Alignment.Center
                                         ) {
                                             Icon(
-                                                Icons.Default.ContentCopy,
-                                                contentDescription = "Copy Code",
-                                                tint = Color.White
+                                                imageVector = Icons.Default.MeetingRoom,
+                                                contentDescription = null,
+                                                tint = ArcadePrimary,
+                                                modifier = Modifier.size(20.dp)
                                             )
                                         }
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Column {
+                                            Text(
+                                                text = "Host Private Room",
+                                                fontSize = 16.sp,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = ArcadeOnSurface
+                                            )
+                                            Text(
+                                                text = "Create your parlor & invite friends",
+                                                fontSize = 11.sp,
+                                                color = ArcadeOnSurfaceVariant
+                                            )
+                                        }
+                                    }
 
-                                        Button(
-                                            onClick = { onCreateRoom() },
-                                            shape = RoundedCornerShape(10.dp),
-                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD700)),
-                                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                                            modifier = Modifier.height(38.dp)
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(ArcadeSurfaceContainer)
+                                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = "FREE PLAY",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = ArcadePrimary
+                                        )
+                                    }
+                                }
+
+                                // Generated PIN Display
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .background(ArcadeSurfaceContainerHigh)
+                                        .padding(14.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(
+                                            text = "YOUR 4-DIGIT ROOM PIN",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = ArcadeOnSurfaceVariant,
+                                            letterSpacing = 0.8.sp
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+
+                                        // 4 PIN blocks
+                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            val pinDigits = activeRoomCode.take(4).padEnd(4, '0')
+                                            pinDigits.forEach { digit ->
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(width = 46.dp, height = 54.dp)
+                                                        .clip(RoundedCornerShape(10.dp))
+                                                        .background(ArcadeSurfaceContainerLowest)
+                                                        .shadow(1.dp, RoundedCornerShape(10.dp)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(
+                                                        text = digit.toString(),
+                                                        fontSize = 24.sp,
+                                                        fontWeight = FontWeight.Black,
+                                                        color = ArcadePrimary
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.height(10.dp))
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Button(
+                                                onClick = {
+                                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                                    clipboard.setPrimaryClip(ClipData.newPlainText("Bingo Room PIN", activeRoomCode))
+                                                    Toast.makeText(context, "Copied Room PIN: $activeRoomCode", Toast.LENGTH_SHORT).show()
+                                                },
+                                                colors = ButtonDefaults.buttonColors(containerColor = ArcadeSurfaceContainerLowest),
+                                                shape = RoundedCornerShape(20.dp),
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.ContentCopy,
+                                                    contentDescription = null,
+                                                    tint = ArcadePrimary,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text("Copy Code", color = ArcadePrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                            }
+
+                                            Button(
+                                                onClick = {
+                                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                                        type = "text/plain"
+                                                        putExtra(Intent.EXTRA_TEXT, "Join my Arcade Bingo Duel with PIN: $activeRoomCode")
+                                                    }
+                                                    context.startActivity(Intent.createChooser(shareIntent, "Share Room PIN"))
+                                                },
+                                                colors = ButtonDefaults.buttonColors(containerColor = ArcadeSurfaceContainerLowest),
+                                                shape = RoundedCornerShape(20.dp),
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Share,
+                                                    contentDescription = null,
+                                                    tint = ArcadeOnSurface,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text("Share Link", color = ArcadeOnSurface, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Format selector
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Lobby Format",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = ArcadeOnSurfaceVariant
+                                    )
+                                    Row(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(16.dp))
+                                            .background(ArcadeSurfaceContainer)
+                                            .padding(2.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(14.dp))
+                                                .background(if (lobbyFormat == "1v1") ArcadePrimary else Color.Transparent)
+                                                .clickable { lobbyFormat = "1v1" }
+                                                .padding(horizontal = 10.dp, vertical = 4.dp)
                                         ) {
                                             Text(
-                                                "New Code",
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.Black,
-                                                color = Color(0xFF1A0033),
-                                                maxLines = 1
+                                                text = "1V1 DUEL",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (lobbyFormat == "1v1") Color.White else ArcadeOnSurfaceVariant
+                                            )
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(14.dp))
+                                                .background(if (lobbyFormat == "4p") ArcadePrimary else Color.Transparent)
+                                                .clickable { lobbyFormat = "4p" }
+                                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                                        ) {
+                                            Text(
+                                                text = "4-P BLITZ",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (lobbyFormat == "4p") Color.White else ArcadeOnSurfaceVariant
                                             )
                                         }
                                     }
@@ -833,277 +648,86 @@ Can you beat my brain strategy? Join now! 🎯⚡
                             }
                         }
 
-                        // Bluetooth / Quick Share clarification banner
+                        // Join Friend's Room Card
                         Card(
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF38BDF8).copy(alpha = 0.5f)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    Icons.Default.Info,
-                                    contentDescription = null,
-                                    tint = Color(0xFF38BDF8),
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    "✨ No Bluetooth / Quick Share needed! Simply give your 6-digit room code to your friend to join over Wi-Fi/Internet.",
-                                    color = Color(0xFFE0F2FE),
-                                    fontSize = 11.sp,
-                                    lineHeight = 15.sp
-                                )
-                            }
-                        }
-
-                        // Host Direct Start Board Setup Button (Don't make host wait!)
-                        Button(
-                            onClick = onProceedToSetup,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(50.dp)
-                                .testTag("host_start_setup_button"),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB300)),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color(0xFF1A0033))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                "START BOARD SETUP (HOST) 🎯",
-                                fontWeight = FontWeight.Black,
-                                fontSize = 14.sp,
-                                color = Color(0xFF1A0033)
-                            )
-                        }
-
-                        // Share Action Buttons: WhatsApp & In-App Share
-                        Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            shape = RoundedCornerShape(18.dp),
+                            colors = CardDefaults.cardColors(containerColor = ArcadeSurfaceContainerHigh)
                         ) {
-                            Button(
-                                onClick = {
-                                    shareChallengeViaWhatsApp(state.roomCode, state.challengeLevel)
-                                },
-                                modifier = Modifier.weight(1f).height(46.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Icon(Icons.Default.Send, contentDescription = null, tint = Color.White)
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    "WhatsApp 📲",
-                                    fontWeight = FontWeight.Black,
-                                    fontSize = 13.sp,
-                                    color = Color.White,
-                                    maxLines = 1
-                                )
-                            }
-
-                            Button(
-                                onClick = {
-                                    showShareDialog = true
-                                },
-                                modifier = Modifier.weight(1f).height(46.dp),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0288D1))
-                            ) {
-                                Icon(Icons.Default.Share, contentDescription = null, tint = Color.White)
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    "Share Code 🔑",
-                                    fontWeight = FontWeight.Black,
-                                    fontSize = 13.sp,
-                                    color = Color.White,
-                                    maxLines = 1
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // 4. Join Existing Private Room
-                Card(
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = theme.cardBgColor),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
+                            Column(
                                 modifier = Modifier
-                                    .size(34.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFF00E5FF).copy(alpha = 0.2f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(Icons.Default.MeetingRoom, contentDescription = null, tint = Color(0xFF00E5FF))
-                            }
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(
-                                "Join with Friend's Code 🔑",
-                                fontWeight = FontWeight.Black,
-                                fontSize = 15.sp,
-                                color = theme.textPrimary
-                            )
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            OutlinedTextField(
-                                value = joinCodeInput,
-                                onValueChange = { if (it.length <= 8) joinCodeInput = it.uppercase() },
-                                label = { Text("Enter room code (Letters + Numbers)") },
-                                placeholder = { Text("e.g. BG7X9K") },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(
-                                    capitalization = KeyboardCapitalization.Characters,
-                                    keyboardType = KeyboardType.Ascii
-                                ),
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(10.dp),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedTextColor = Color.White,
-                                    unfocusedTextColor = Color.White,
-                                    focusedBorderColor = Color(0xFF00E5FF),
-                                    unfocusedBorderColor = Color.White.copy(alpha = 0.4f)
-                                )
-                            )
-
-                            Button(
-                                onClick = {
-                                    refreshNetwork()
-                                    if (!isOnlineConnected) {
-                                        Toast.makeText(context, "Please connect to Wi-Fi or Mobile Network first!", Toast.LENGTH_LONG).show()
-                                    } else if (joinCodeInput.trim().length >= 4) {
-                                        onJoinRoom(joinCodeInput.trim())
-                                    } else {
-                                        Toast.makeText(context, "Please enter a valid room code!", Toast.LENGTH_SHORT).show()
-                                    }
-                                },
-                                shape = RoundedCornerShape(10.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E5FF)),
-                                modifier = Modifier.height(54.dp)
-                            ) {
-                                Text("JOIN", fontWeight = FontWeight.Black, color = Color(0xFF002233))
-                            }
-                        }
-
-                        Text(
-                            text = "Status: ${state.onlineStatusMessage}",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color(0xFF69F0AE)
-                        )
-                    }
-                }
-
-                // 4.5. Active Online Players (Real-Time Firebase Firestore)
-                if (onlinePlayers.isNotEmpty()) {
-                    Card(
-                        shape = RoundedCornerShape(18.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Box(
                                         modifier = Modifier
-                                            .size(10.dp)
+                                            .size(36.dp)
                                             .clip(CircleShape)
-                                            .background(Color(0xFF16A34A))
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        "Online Players in Arena 🟢",
-                                        fontWeight = FontWeight.Black,
-                                        fontSize = 15.sp,
-                                        color = Color(0xFF0F172A)
-                                    )
-                                }
-                                Text(
-                                    "${onlinePlayers.size} active",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF16A34A)
-                                )
-                            }
-
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                onlinePlayers.take(5).forEach { player ->
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(Color(0xFFF1F5F9))
-                                            .padding(10.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
+                                            .background(ArcadeSecondaryFixed),
+                                        contentAlignment = Alignment.Center
                                     ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.weight(1f)
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(36.dp)
-                                                    .clip(CircleShape)
-                                                    .background(Color(0xFFE0E7FF)),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Text(player.avatar, fontSize = 20.sp)
-                                            }
-                                            Spacer(modifier = Modifier.width(10.dp))
-                                            Column {
-                                                Text(
-                                                    player.name,
-                                                    fontWeight = FontWeight.Black,
-                                                    fontSize = 13.sp,
-                                                    color = Color(0xFF0F172A)
-                                                )
-                                                Text(
-                                                    "Level ${player.level} • Ready to duel",
-                                                    fontSize = 11.sp,
-                                                    color = Color(0xFF64748B)
-                                                )
-                                            }
-                                        }
+                                        Icon(
+                                            imageVector = Icons.Default.Pin,
+                                            contentDescription = null,
+                                            tint = ArcadeSecondary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Text(
+                                            text = "Join Friend's Room",
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = ArcadeOnSurface
+                                        )
+                                        Text(
+                                            text = "Enter host's 4-digit numeric code",
+                                            fontSize = 11.sp,
+                                            color = ArcadeOnSurfaceVariant
+                                        )
+                                    }
+                                }
 
-                                        Button(
-                                            onClick = {
-                                                onSendCustomChallenge(player.name, player.level)
-                                            },
-                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB300)),
-                                            shape = RoundedCornerShape(10.dp),
-                                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                            modifier = Modifier.height(34.dp)
-                                        ) {
-                                            Text(
-                                                "CHALLENGE ⚔️",
-                                                fontWeight = FontWeight.Black,
-                                                fontSize = 11.sp,
-                                                color = Color(0xFF1A0033)
-                                            )
-                                        }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    OutlinedTextField(
+                                        value = pinInputValue,
+                                        onValueChange = { if (it.length <= 6) pinInputValue = it.uppercase() },
+                                        placeholder = { Text("••••", letterSpacing = 4.sp) },
+                                        singleLine = true,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .testTag("lobby_pin_input"),
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedContainerColor = ArcadeSurfaceContainerLowest,
+                                            unfocusedContainerColor = ArcadeSurfaceContainerLowest,
+                                            focusedBorderColor = ArcadePrimary,
+                                            unfocusedBorderColor = Color.Transparent
+                                        )
+                                    )
+
+                                    Button(
+                                        onClick = {
+                                            if (pinInputValue.isNotBlank()) {
+                                                onJoinRoom(pinInputValue.trim())
+                                            } else {
+                                                Toast.makeText(context, "Enter a 4-digit PIN", Toast.LENGTH_SHORT).show()
+                                            }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = ArcadePrimary),
+                                        shape = RoundedCornerShape(14.dp),
+                                        modifier = Modifier
+                                            .height(52.dp)
+                                            .testTag("lobby_join_btn")
+                                    ) {
+                                        Text("Join", color = Color.White, fontWeight = FontWeight.Black)
                                     }
                                 }
                             }
@@ -1111,174 +735,120 @@ Can you beat my brain strategy? Join now! 🎯⚡
                     }
                 }
 
-                // 5. Friends & Level Management (Dost & Levels)
-                Card(
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
+                // TAB 3: Online Players List (Arcade Lounge)
+                if (selectedTab == "online") {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f, fill = false)
-                            ) {
-                                Icon(Icons.Default.People, contentDescription = null, tint = Color(0xFFE91E63))
-                                Spacer(modifier = Modifier.width(8.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    "Friends & Skill Levels 👥",
-                                    fontWeight = FontWeight.Black,
-                                    fontSize = 16.sp,
-                                    color = Color(0xFF0F172A)
+                                    text = "Arcade Lounge",
+                                    fontSize = 17.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = ArcadeOnSurface
                                 )
-                            }
-
-                            Button(
-                                onClick = { showAddFriendDialog = true },
-                                shape = RoundedCornerShape(20.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE91E63)),
-                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                                modifier = Modifier.height(36.dp)
-                            ) {
-                                Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Add Friend", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(ArcadePrimaryFixed)
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "142 ONLINE",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = ArcadePrimary
+                                    )
+                                }
                             }
                         }
 
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            state.friendsList.forEach { friend ->
-                                Card(
-                                    shape = RoundedCornerShape(14.dp),
-                                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                                    modifier = Modifier.fillMaxWidth()
+                        // Players List
+                        val samplePlayers = listOf(
+                            Triple("CyberQueen", "Plat III", "👑"),
+                            Triple("ViperX", "Gold I", "⚡"),
+                            Triple("LuckyDauber", "Silver II", "🍀"),
+                            Triple("StarStriker", "Gold II", "⭐"),
+                            Triple("NeonPulse", "Diamond I", "🔮")
+                        )
+
+                        samplePlayers.forEach { (name, rank, avatar) ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = ArcadeSurfaceContainerLowest),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(
-                                        modifier = Modifier.padding(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.weight(1f),
-                                            verticalAlignment = Alignment.CenterVertically
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(44.dp)
+                                                .clip(CircleShape)
+                                                .background(ArcadeSurfaceContainerHigh),
+                                            contentAlignment = Alignment.Center
                                         ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(40.dp)
-                                                    .clip(CircleShape)
-                                                    .background(Color(0xFFEDE9FE)),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Text(text = friend.avatarEmoji, fontSize = 22.sp)
-                                            }
-                                            Spacer(modifier = Modifier.width(10.dp))
-                                            Column {
-                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(text = avatar, fontSize = 22.sp)
+                                        }
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Column {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    text = name,
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = ArcadeOnSurface
+                                                )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Box(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(6.dp))
+                                                        .background(ArcadeTertiaryFixed)
+                                                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                                                ) {
                                                     Text(
-                                                        friend.name,
+                                                        text = rank,
+                                                        fontSize = 9.sp,
                                                         fontWeight = FontWeight.Black,
-                                                        fontSize = 14.sp,
-                                                        color = Color(0xFF0F172A)
-                                                    )
-                                                    Spacer(modifier = Modifier.width(6.dp))
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .size(8.dp)
-                                                            .clip(CircleShape)
-                                                            .background(if (friend.isOnline) Color(0xFF16A34A) else Color(0xFF94A3B8))
-                                                    )
-                                                    Spacer(modifier = Modifier.width(4.dp))
-                                                    Text(
-                                                        if (friend.isOnline) "Online" else "Offline",
-                                                        fontSize = 10.sp,
-                                                        color = if (friend.isOnline) Color(0xFF16A34A) else Color(0xFF64748B),
-                                                        fontWeight = FontWeight.Bold
+                                                        color = ArcadeTertiary
                                                     )
                                                 }
-                                                Text(
-                                                    "Lvl ${friend.level} • ${friend.statsDesc}",
-                                                    fontSize = 11.sp,
-                                                    fontWeight = FontWeight.Medium,
-                                                    color = Color(0xFF475569)
-                                                )
                                             }
+                                            Text(
+                                                text = "Looking for Match • 18ms",
+                                                fontSize = 11.sp,
+                                                color = EmeraldWin
+                                            )
                                         }
+                                    }
 
-                                        Row(
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            // Quick Level Up/Down button
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(34.dp)
-                                                    .clip(CircleShape)
-                                                    .background(Color(0xFFFEF3C7))
-                                                    .clickable {
-                                                        val newLvl = if (friend.level >= 5) 1 else friend.level + 1
-                                                        onUpdateFriendLevel(friend.name, newLvl)
-                                                    },
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Icon(
-                                                    Icons.Default.Star,
-                                                    contentDescription = "Change Level",
-                                                    tint = Color(0xFFD97706),
-                                                    modifier = Modifier.size(18.dp)
-                                                )
-                                            }
-
-                                            // Direct WhatsApp challenge to this friend
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(34.dp)
-                                                    .clip(CircleShape)
-                                                    .background(Color(0xFFDCFCE7))
-                                                    .clickable {
-                                                        shareChallengeViaWhatsApp(state.roomCode, friend.level, friend.name)
-                                                    },
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Icon(
-                                                    Icons.Default.Send,
-                                                    contentDescription = "WhatsApp",
-                                                    tint = Color(0xFF16A34A),
-                                                    modifier = Modifier.size(16.dp)
-                                                )
-                                            }
-
-                                            // Challenge Button
-                                            Button(
-                                                onClick = {
-                                                    refreshNetwork()
-                                                    if (!isOnlineConnected) {
-                                                        Toast.makeText(context, "Please connect to Wi-Fi or Mobile Network first!", Toast.LENGTH_SHORT).show()
-                                                    } else {
-                                                        onChallengeFriend(friend)
-                                                    }
-                                                },
-                                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB300)),
-                                                shape = RoundedCornerShape(10.dp),
-                                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-                                                modifier = Modifier.height(34.dp)
-                                            ) {
-                                                Text(
-                                                    "DUEL ⚔️",
-                                                    fontWeight = FontWeight.Black,
-                                                    fontSize = 12.sp,
-                                                    color = Color(0xFF1A0033)
-                                                )
-                                            }
-                                        }
+                                    Button(
+                                        onClick = {
+                                            challengeTargetName = name
+                                            challengeTargetRank = rank
+                                            showChallengeModal = true
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = ArcadeTertiary),
+                                        shape = RoundedCornerShape(20.dp),
+                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                        modifier = Modifier.height(36.dp)
+                                    ) {
+                                        Text(
+                                            text = "Challenge ⚔️",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White
+                                        )
                                     }
                                 }
                             }
@@ -1286,511 +856,107 @@ Can you beat my brain strategy? Join now! 🎯⚡
                     }
                 }
 
-                // 6. Big Proceed to Board Setup Button
-                Button(
-                    onClick = onProceedToSetup,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .testTag("online_proceed_button"),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD700)),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Text(
-                        "SET UP YOUR 1-25 BOARD 🎯",
-                        color = Color(0xFF1A0033),
-                        fontWeight = FontWeight.Black,
-                        fontSize = 16.sp
-                    )
-                }
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
 
-    // Add Friend Dialog
-    if (showAddFriendDialog) {
-        AlertDialog(
-            onDismissRequest = { showAddFriendDialog = false },
-            title = {
-                Text("Add New Friend 👥", fontWeight = FontWeight.Black)
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = newFriendName,
-                        onValueChange = { newFriendName = it },
-                        label = { Text("Friend's Name") },
-                        placeholder = { Text("e.g. Samar_Mind") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Text("Friend's Skill Level:", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        for (lvl in 1..5) {
-                            val selected = newFriendLevel == lvl
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(if (selected) Color(0xFFFFB300) else Color(0xFFECEFF1))
-                                    .clickable { newFriendLevel = lvl }
-                                    .padding(vertical = 8.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    "Lvl $lvl",
-                                    fontWeight = FontWeight.Black,
-                                    fontSize = 12.sp,
-                                    color = if (selected) Color(0xFF1A0033) else Color(0xFF455A64)
-                                )
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (newFriendName.isNotBlank()) {
-                            onAddFriend(newFriendName.trim(), newFriendLevel)
-                            newFriendName = ""
-                            newFriendLevel = 1
-                            showAddFriendDialog = false
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1976D2))
-                ) {
-                    Text("Add Friend")
-                }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = { showAddFriendDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    // Real-Time Outgoing Challenge Modal (Displays Pending, Accepted, or Rejected in Gaming Language)
-    if (outgoingChallenge != null) {
-        val isPending = outgoingChallenge.status == ChallengeStatus.PENDING
-        val isAccepted = outgoingChallenge.status == ChallengeStatus.ACCEPTED
-        val isRejected = outgoingChallenge.status == ChallengeStatus.REJECTED
-
-        AlertDialog(
-            onDismissRequest = {
-                if (!isPending) {
-                    onCancelOutgoingChallenge()
-                }
-            },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        when {
-                            isAccepted -> "⚡"
-                            isRejected -> "🛡️"
-                            else -> "⚔️"
-                        },
-                        fontSize = 24.sp
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = when {
-                            isAccepted -> "DUEL COMMENCED! ⚡"
-                            isRejected -> "CHALLENGE DECLINED 🛡️"
-                            else -> "CHALLENGE TRANSMITTED ⚔️"
-                        },
-                        fontWeight = FontWeight.Black,
-                        fontSize = 17.sp,
-                        color = when {
-                            isAccepted -> Color(0xFF00C853)
-                            isRejected -> Color(0xFFD50000)
-                            else -> Color(0xFF6200EA)
-                        }
-                    )
-                }
-            },
-            text = {
+    // Modal: Challenge Player Confirmation
+    if (showChallengeModal) {
+        Dialog(onDismissRequest = { showChallengeModal = false }) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                shape = RoundedCornerShape(20.dp),
+                color = ArcadeSurfaceContainerLowest,
+                shadowElevation = 8.dp
+            ) {
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Card(
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = when {
-                                isAccepted -> Color(0xFFE8F5E9)
-                                isRejected -> Color(0xFFFFEBEE)
-                                else -> Color(0xFFEDE7F6)
-                            }
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(14.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text(
-                                text = "Opponent: ${outgoingChallenge.receiverName}",
-                                fontWeight = FontWeight.Black,
-                                fontSize = 15.sp,
-                                color = Color(0xFF1E293B)
-                            )
-                            Text(
-                                text = "Room Code: #${outgoingChallenge.roomCode}",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF475569)
-                            )
-
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            Text(
-                                text = when {
-                                    isAccepted -> "⚡ STATUS: ACCEPTED!"
-                                    isRejected -> "🛡️ STATUS: DECLINED (Retreated)"
-                                    else -> "⏳ STATUS: PENDING (Awaiting Opponent...)"
-                                },
-                                fontWeight = FontWeight.Black,
-                                fontSize = 13.sp,
-                                color = when {
-                                    isAccepted -> Color(0xFF2E7D32)
-                                    isRejected -> Color(0xFFC62828)
-                                    else -> Color(0xFF512DA8)
-                                }
-                            )
-
-                            if (isPending) {
-                                LinearProgressIndicator(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(5.dp)
-                                        .clip(RoundedCornerShape(3.dp)),
-                                    color = Color(0xFF6200EA)
-                                )
-                                Text(
-                                    text = "📲 Live duel request sent to ${outgoingChallenge.receiverName}! Once accepted, your match will begin automatically.",
-                                    fontSize = 11.sp,
-                                    textAlign = TextAlign.Center,
-                                    color = Color(0xFF475569)
-                                )
-                            } else if (isAccepted) {
-                                Text(
-                                    text = "🎉 ${outgoingChallenge.receiverName} accepted the challenge! Boards are synced. Enter the duel arena now!",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    textAlign = TextAlign.Center,
-                                    color = Color(0xFF2E7D32)
-                                )
-                            } else if (isRejected) {
-                                Text(
-                                    text = "🛡️ ${outgoingChallenge.receiverName} declined the challenge. You can challenge another friend or try Quick Match!",
-                                    fontSize = 12.sp,
-                                    textAlign = TextAlign.Center,
-                                    color = Color(0xFFC62828)
-                                )
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                if (isAccepted) {
-                    Button(
-                        onClick = {
-                            onCancelOutgoingChallenge()
-                            onProceedToSetup()
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853)),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Text("ENTER DUEL ARENA 🎯", color = Color.White, fontWeight = FontWeight.Black)
-                    }
-                } else if (isPending) {
-                    Button(
-                        onClick = {
-                            val targetName = outgoingChallenge.receiverName
-                            val targetLevel = outgoingChallenge.receiverLevel
-                            onCancelOutgoingChallenge()
-                            onStartCustomDuel(targetName, targetLevel)
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB300)),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Text("START MATCH NOW ⚡", color = Color(0xFF1A0033), fontWeight = FontWeight.Black)
-                    }
-                } else if (isRejected) {
-                    Button(
-                        onClick = { onCancelOutgoingChallenge() },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF455A64)),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Text("Dismiss")
-                    }
-                }
-            },
-            dismissButton = {
-                if (isPending) {
-                    OutlinedButton(
-                        onClick = { onCancelOutgoingChallenge() },
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Text("Cancel Challenge ❌", color = Color(0xFFC62828))
-                    }
-                }
-            }
-        )
-    }
-
-    // Custom Challenge Dialog (Challenge Any Player or Friend by Name / User ID)
-    if (showCustomChallengeDialog) {
-        AlertDialog(
-            onDismissRequest = { showCustomChallengeDialog = false },
-            title = {
-                Text("Send Duel Challenge ⚔️", fontWeight = FontWeight.Black)
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = customTargetName,
-                        onValueChange = { customTargetName = it },
-                        label = { Text("Friend's Username or ID") },
-                        placeholder = { Text("e.g. Samar_Mind") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Text("Challenge Level (Skill):", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        for (lvl in 1..5) {
-                            val selected = customTargetLevel == lvl
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(if (selected) Color(0xFFFFB300) else Color(0xFFECEFF1))
-                                    .clickable { customTargetLevel = lvl }
-                                    .padding(vertical = 8.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    "Lvl $lvl",
-                                    fontWeight = FontWeight.Black,
-                                    fontSize = 12.sp,
-                                    color = if (selected) Color(0xFF1A0033) else Color(0xFF455A64)
-                                )
-                            }
-                        }
-                    }
-
-                    Text(
-                        "Sending a challenge notifies your friend with a duel alert. You can also start playing right away!",
-                        fontSize = 11.sp,
-                        color = Color(0xFF64748B)
-                    )
-                }
-            },
-            confirmButton = {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        onClick = {
-                            if (customTargetName.isNotBlank()) {
-                                val name = customTargetName.trim()
-                                val lvl = customTargetLevel
-                                customTargetName = ""
-                                customTargetLevel = 1
-                                showCustomChallengeDialog = false
-                                onStartCustomDuel(name, lvl)
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853)),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Text("PLAY NOW ⚡", color = Color.White, fontWeight = FontWeight.Black)
-                    }
-
-                    Button(
-                        onClick = {
-                            if (customTargetName.isNotBlank()) {
-                                onSendCustomChallenge(customTargetName.trim(), customTargetLevel)
-                                customTargetName = ""
-                                customTargetLevel = 1
-                                showCustomChallengeDialog = false
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB300)),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Text("INVITE 📲", color = Color(0xFF1A0033), fontWeight = FontWeight.Black)
-                    }
-                }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = { showCustomChallengeDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    // In-App Share Room Code Dialog (Prevents Quick Share Bluetooth hang)
-    if (showShareDialog) {
-        var isCopied by remember { mutableStateOf(false) }
-
-        AlertDialog(
-            onDismissRequest = { showShareDialog = false },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("🔑", fontSize = 24.sp)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Share Room Code #${state.roomCode}",
-                        fontWeight = FontWeight.Black,
-                        fontSize = 17.sp,
-                        color = Color(0xFF0F172A)
-                    )
-                }
-            },
-            text = {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.fillMaxWidth()
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    // Big Room Code display
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF0F172A))
-                            .padding(14.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                "YOUR 6-DIGIT ROOM CODE",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF94A3B8)
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                "#${state.roomCode}",
-                                fontSize = 28.sp,
-                                fontWeight = FontWeight.Black,
-                                color = Color(0xFFFFD700)
-                            )
-                        }
-                    }
+                    Text(
+                        text = "Challenge $challengeTargetName",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = ArcadeOnSurface
+                    )
 
-                    // Notice Card explaining No Bluetooth / No Quick Share needed
-                    Card(
-                        shape = RoundedCornerShape(10.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF)),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFBFDBFE)),
-                        modifier = Modifier.fillMaxWidth()
+                    Text(
+                        text = "Start a 1v1 Ranked Duel against $challengeTargetName ($challengeTargetRank). Ready up your tactical board!",
+                        fontSize = 13.sp,
+                        color = ArcadeOnSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        Button(
+                            onClick = { showChallengeModal = false },
+                            colors = ButtonDefaults.buttonColors(containerColor = ArcadeSurfaceContainerHigh),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
                         ) {
-                            Icon(
-                                Icons.Default.Info,
-                                contentDescription = null,
-                                tint = Color(0xFF2563EB),
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    "No Bluetooth or complex setup required. Share this 6-digit code with your friend, and they can join via 'Join with Friend's Code'!",
-                                    fontSize = 11.sp,
-                                    color = Color(0xFF1E40AF),
-                                    lineHeight = 15.sp
-                                )
+                            Text("Cancel", color = ArcadeOnSurface, fontWeight = FontWeight.Bold)
+                        }
+
+                        Button(
+                            onClick = {
+                                showChallengeModal = false
+                                onStartCustomDuel(challengeTargetName, 15)
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = ArcadeTertiary),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("confirm_challenge_btn")
+                        ) {
+                            Text("Duel Now ⚔️", color = Color.White, fontWeight = FontWeight.Black)
                         }
                     }
-
-                    // 1-Tap Copy Button
-                    Button(
-                        onClick = {
-                            copyRoomCodeOnly(state.roomCode)
-                            isCopied = true
-                        },
-                        modifier = Modifier.fillMaxWidth().height(46.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isCopied) Color(0xFF16A34A) else Color(0xFF1E293B)
-                        ),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Icon(
-                            if (isCopied) Icons.Default.Check else Icons.Default.ContentCopy,
-                            contentDescription = null,
-                            tint = Color.White
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            if (isCopied) "COPIED TO CLIPBOARD! ✅" else "COPY CODE TO CLIPBOARD 📋",
-                            fontWeight = FontWeight.Black,
-                            fontSize = 13.sp,
-                            color = Color.White
-                        )
-                    }
-
-                    // WhatsApp Direct
-                    Button(
-                        onClick = {
-                            shareChallengeViaWhatsApp(state.roomCode, state.challengeLevel)
-                            showShareDialog = false
-                        },
-                        modifier = Modifier.fillMaxWidth().height(44.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Icon(Icons.Default.Send, contentDescription = null, tint = Color.White)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Send on WhatsApp 📲", fontWeight = FontWeight.Bold, color = Color.White)
-                    }
-
-                    // SMS Direct
-                    OutlinedButton(
-                        onClick = {
-                            shareChallengeViaSms(state.roomCode, state.challengeLevel)
-                            showShareDialog = false
-                        },
-                        modifier = Modifier.fillMaxWidth().height(44.dp),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Icon(Icons.Default.Sms, contentDescription = null, tint = Color(0xFF0288D1))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Send via SMS / Message 💬", fontWeight = FontWeight.Bold, color = Color(0xFF0288D1))
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showShareDialog = false
-                        onProceedToSetup()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB300)),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("START BOARD SETUP NOW 🎯", color = Color(0xFF1A0033), fontWeight = FontWeight.Black)
-                }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = { showShareDialog = false }) {
-                    Text("Close ✕")
                 }
             }
-        )
+        }
+    }
+}
+
+@Composable
+private fun LobbyTabPill(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    isSelected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(if (isSelected) ArcadePrimary else Color.Transparent)
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (isSelected) Color.White else ArcadeOnSurfaceVariant,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = label,
+                fontSize = 12.sp,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                color = if (isSelected) Color.White else ArcadeOnSurfaceVariant
+            )
+        }
     }
 }

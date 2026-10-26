@@ -44,7 +44,7 @@ class MainActivity : ComponentActivity() {
             MyApplicationTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = Color(0xFFE1F5FE)
+                    color = com.example.ui.theme.ArcadeBackground
                 ) {
                     KidsBingoApp()
                 }
@@ -113,6 +113,11 @@ fun KidsBingoApp(
                 onStartGame = { cards, diff ->
                     viewModel.startNewGame(cardCount = cards, difficulty = diff)
                     navController.navigate("game")
+                },
+                onJoinRoomCode = { code ->
+                    viewModel.joinOnlineRoom(code) {
+                        navController.navigate("classic_setup")
+                    }
                 },
                 onNavigateSpinWheel = { navController.navigate("spin_wheel") },
                 onNavigateThemes = { navController.navigate("themes") },
@@ -221,6 +226,16 @@ fun KidsBingoApp(
                         receiverLevel = level,
                         onAcceptedGoToSetup = {
                             navController.navigate("classic_setup")
+                        }
+                    )
+                },
+                onStartCustomDuel = { name, level ->
+                    viewModel.startDirectFriendMatch(
+                        friendName = name,
+                        friendLevel = level,
+                        skipSetup = true,
+                        onStart = {
+                            navController.navigate("classic_game")
                         }
                     )
                 },
