@@ -62,7 +62,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -95,10 +98,20 @@ import com.example.ui.theme.ArcadeSurfaceContainerLowest
 import com.example.ui.theme.ArcadeTertiary
 import com.example.ui.theme.ArcadeTertiaryContainer
 import com.example.ui.theme.ArcadeTertiaryFixed
+import com.example.ui.theme.RedPenStrike
 import com.example.ui.theme.TournamentGold
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlin.random.Random
 
-data class WheelPrize(val label: String, val amount: Int, val isGems: Boolean, val color: Color)
+data class WheelPrize(
+    val label: String,
+    val displayAmount: String,
+    val displayIcon: String,
+    val amount: Int,
+    val isGems: Boolean,
+    val color: Color
+)
 
 @Composable
 fun SpinWheelScreen(
@@ -111,14 +124,14 @@ fun SpinWheelScreen(
     BackHandler { onBack() }
 
     val prizes = listOf(
-        WheelPrize("5,000 🪙", 5000, false, ArcadePrimary),
-        WheelPrize("50 💎", 50, true, ArcadeTertiary),
-        WheelPrize("SKIN ⚡", 1000, false, ArcadePrimaryContainer),
-        WheelPrize("1,500 💰", 1500, false, ArcadeSecondary),
-        WheelPrize("BOOST 📦", 800, false, ArcadeTertiaryContainer),
-        WheelPrize("JACKPOT! 🌟", 50000, false, TournamentGold),
-        WheelPrize("25 💎", 25, true, ArcadePrimaryFixed),
-        WheelPrize("2X XP 🎟️", 500, false, ArcadeSecondaryContainer)
+        WheelPrize("5,000 Coins", "5,000", "🪙", 5000, false, ArcadePrimary),
+        WheelPrize("50 Gems", "50", "💎", 50, true, ArcadeTertiary),
+        WheelPrize("1,000 XP", "1,000", "⚡", 1000, false, Color(0xFF00897B)),
+        WheelPrize("1,500 Coins", "1,500", "💰", 1500, false, ArcadeSecondary),
+        WheelPrize("800 Coins", "800", "🪙", 800, false, ArcadeTertiaryContainer),
+        WheelPrize("50,000 ⭐", "50K", "🌟", 50000, false, TournamentGold),
+        WheelPrize("25 Gems", "25", "💎", 25, true, ArcadePrimaryFixed),
+        WheelPrize("2,000 Boost", "2,000", "🎟️", 2000, false, ArcadeSecondaryContainer)
     )
 
     var currentAngle by remember { mutableFloatStateOf(0f) }
@@ -131,9 +144,9 @@ fun SpinWheelScreen(
         animationSpec = tween(durationMillis = 4000, easing = FastOutSlowInEasing),
         finishedListener = {
             isSpinning = false
-            // Calculate slice
-            val normalizedAngle = (360f - (currentAngle % 360f) + 22.5f) % 360f
-            val index = (normalizedAngle / 45f).toInt() % prizes.size
+            // Calculate slice aligning with top pointer (270 degrees in polar coordinates)
+            val winningAngle = (270f - (currentAngle % 360f) + 360f) % 360f
+            val index = (winningAngle / 45f).toInt() % prizes.size
             val prize = prizes[index]
             wonPrize = prize
             onRewardEarned(prize.amount)
@@ -398,23 +411,44 @@ fun SpinWheelScreen(
                             .shadow(8.dp, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        // Outer rim with light bulbs
+                        // Outer rim with metallic pegs
                         Canvas(modifier = Modifier.fillMaxSize()) {
+                            val rimRadius = size.width / 2f
                             drawCircle(color = ArcadeInverseSurface)
                             drawCircle(
                                 color = ArcadeSurfaceContainer,
-                                radius = size.width / 2f - 4.dp.toPx(),
-                                style = Stroke(width = 6.dp.toPx())
+                                radius = rimRadius - 4.dp.toPx(),
+                                style = Stroke(width = 8.dp.toPx())
                             )
+                            // 16 golden perimeter pegs
+                            val pegDistance = rimRadius - 4.dp.toPx()
+                            for (p in 0 until 16) {
+                                val angleDeg = p * (360f / 16f)
+                                val angleRad = Math.toRadians(angleDeg.toDouble())
+                                val px = center.x + (pegDistance * cos(angleRad)).toFloat()
+                                val py = center.y + (pegDistance * sin(angleRad)).toFloat()
+                                drawCircle(
+                                    color = TournamentGold,
+                                    radius = 3.5.dp.toPx(),
+                                    center = Offset(px, py)
+                                )
+                                drawCircle(
+                                    color = Color.White,
+                                    radius = 1.2.dp.toPx(),
+                                    center = Offset(px - 1f, py - 1f)
+                                )
+                            }
                         }
 
-                        // Rotating 8-slice wheel
+                        // Rotating 8-slice wheel with numbers & icons
                         Canvas(
                             modifier = Modifier
                                 .size(280.dp)
                                 .rotate(animatedAngle)
                         ) {
                             val sliceAngle = 45f
+                            val radius = size.width / 2f
+
                             for (i in 0 until 8) {
                                 val startA = i * sliceAngle
                                 drawArc(
@@ -425,12 +459,43 @@ fun SpinWheelScreen(
                                 )
                                 // Divider line
                                 drawArc(
-                                    color = Color.White.copy(alpha = 0.4f),
+                                    color = Color.White.copy(alpha = 0.5f),
                                     startAngle = startA,
                                     sweepAngle = sliceAngle,
                                     useCenter = true,
                                     style = Stroke(width = 1.5.dp.toPx())
                                 )
+                            }
+
+                            // Render amount and icon text on each slice
+                            drawIntoCanvas { canvas ->
+                                val native = canvas.nativeCanvas
+                                val textPaint = android.graphics.Paint().apply {
+                                    color = android.graphics.Color.WHITE
+                                    textSize = 14.sp.toPx()
+                                    typeface = android.graphics.Typeface.DEFAULT_BOLD
+                                    textAlign = android.graphics.Paint.Align.RIGHT
+                                    setShadowLayer(4f, 1f, 1f, android.graphics.Color.argb(180, 0, 0, 0))
+                                }
+                                val iconPaint = android.graphics.Paint().apply {
+                                    textSize = 15.sp.toPx()
+                                    textAlign = android.graphics.Paint.Align.CENTER
+                                }
+
+                                for (i in 0 until 8) {
+                                    val midAngle = i * sliceAngle + 22.5f
+                                    native.save()
+                                    native.rotate(midAngle, center.x, center.y)
+
+                                    val amountX = center.x + radius - 14.dp.toPx()
+                                    val textY = center.y + 5.dp.toPx()
+                                    native.drawText(prizes[i].displayAmount, amountX, textY, textPaint)
+
+                                    val iconX = center.x + radius * 0.44f
+                                    native.drawText(prizes[i].displayIcon, iconX, textY, iconPaint)
+
+                                    native.restore()
+                                }
                             }
                         }
 
@@ -441,7 +506,7 @@ fun SpinWheelScreen(
                                 .clip(CircleShape)
                                 .background(ArcadeSurfaceContainerLowest)
                                 .clickable(enabled = !isSpinning) { startSpin() }
-                                .shadow(4.dp, CircleShape),
+                                .shadow(6.dp, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Box(
@@ -461,15 +526,37 @@ fun SpinWheelScreen(
                         }
                     }
 
-                    // Pointer Peg at Top
+                    // Authentic downward-pointing Casino Pointer Needle
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopCenter)
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .background(ArcadeSecondaryContainer)
-                            .border(2.dp, Color.White, CircleShape)
-                    )
+                            .size(width = 30.dp, height = 34.dp)
+                            .shadow(6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            val needlePath = Path().apply {
+                                moveTo(size.width / 2f, size.height) // sharp tip at bottom
+                                lineTo(size.width, 6.dp.toPx())
+                                lineTo(size.width * 0.8f, 0f)
+                                lineTo(size.width * 0.2f, 0f)
+                                lineTo(0f, 6.dp.toPx())
+                                close()
+                            }
+                            drawPath(needlePath, color = RedPenStrike)
+                            drawPath(needlePath, color = TournamentGold, style = Stroke(width = 2.dp.toPx()))
+                            drawCircle(
+                                color = TournamentGold,
+                                radius = 5.dp.toPx(),
+                                center = Offset(size.width / 2f, 9.dp.toPx())
+                            )
+                            drawCircle(
+                                color = Color.White,
+                                radius = 2.dp.toPx(),
+                                center = Offset(size.width / 2f, 9.dp.toPx())
+                            )
+                        }
+                    }
                 }
 
                 // 4. Spin Controls Section

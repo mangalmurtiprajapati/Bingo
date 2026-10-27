@@ -3,11 +3,18 @@ package com.example.ui.screens
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,14 +25,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Celebration
@@ -34,11 +40,11 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SmartToy
-import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.VolumeMute
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -58,6 +64,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -73,16 +80,12 @@ import com.example.model.ChatReaction
 import com.example.model.GameMode
 import com.example.model.MatchOutcome
 import com.example.model.MatchTurn
-import com.example.ui.components.ArcadeTopHeader
 import com.example.ui.theme.ArcadeBackground
 import com.example.ui.theme.ArcadeInverseOnSurface
 import com.example.ui.theme.ArcadeInverseSurface
 import com.example.ui.theme.ArcadeOnPrimary
-import com.example.ui.theme.ArcadeOnSecondary
 import com.example.ui.theme.ArcadeOnSurface
 import com.example.ui.theme.ArcadeOnSurfaceVariant
-import com.example.ui.theme.ArcadeOutline
-import com.example.ui.theme.ArcadeOutlineVariant
 import com.example.ui.theme.ArcadePrimary
 import com.example.ui.theme.ArcadePrimaryContainer
 import com.example.ui.theme.ArcadePrimaryFixed
@@ -92,6 +95,7 @@ import com.example.ui.theme.ArcadeSecondaryFixed
 import com.example.ui.theme.ArcadeSurfaceContainer
 import com.example.ui.theme.ArcadeSurfaceContainerHigh
 import com.example.ui.theme.ArcadeSurfaceContainerHighest
+import com.example.ui.theme.ArcadeSurfaceContainerLow
 import com.example.ui.theme.ArcadeSurfaceContainerLowest
 import com.example.ui.theme.ArcadeTertiary
 import com.example.ui.theme.ArcadeTertiaryContainer
@@ -146,406 +150,481 @@ fun ClassicBingoGameScreen(
         }
     }
 
+    // Infinite breathing glow for the turn indicator
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.05f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "turnPulse"
+    )
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = ArcadeBackground,
         topBar = {
-            ArcadeTopHeader(
-                title = "1v1 Duel",
-                subtitle = "Ranked Match",
-                onBack = { showSurrenderDialog = true },
-                onSoundToggle = onToggleSound,
-                isSoundMuted = isSoundMuted
-            )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = 560.dp)
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+            // Unified Compact Arcade Match TopBar & HUD
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = ArcadeInverseSurface,
+                shadowElevation = 6.dp
             ) {
-                // 1. Arena Context Bar
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = ArcadeSurfaceContainer)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    // Row 1: Nav Bar (Back, Match Type, Sound & Surrender)
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
+                            IconButton(
+                                onClick = { showSurrenderDialog = true },
                                 modifier = Modifier
-                                    .size(8.dp)
+                                    .size(36.dp)
                                     .clip(CircleShape)
-                                    .background(ArcadeSecondaryContainer)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "1V1 DUEL ARENA • RANKED",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Black,
-                                color = ArcadePrimary,
-                                letterSpacing = 0.5.sp
-                            )
+                                    .background(ArcadeSurfaceContainer)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Leave Match",
+                                    tint = ArcadeOnSurface,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = if (isFriendMode) "2P PASS & PLAY" else "1V1 DUEL ARENA",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = TournamentGold,
+                                    letterSpacing = 0.5.sp
+                                )
+                                Text(
+                                    text = "First to 5 Lines Wins",
+                                    fontSize = 10.sp,
+                                    color = ArcadeInverseOnSurface.copy(alpha = 0.7f)
+                                )
+                            }
                         }
 
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            // Turn timer capsule
-                            Row(
+                            if (isFriendMode) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(ArcadeSurfaceContainer)
+                                        .clickable { onSwitchBoard(if (state.viewingBoardPlayer == 1) 2 else 1) }
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = "P${state.viewingBoardPlayer} Board 🔄",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = ArcadePrimaryFixed
+                                    )
+                                }
+                            }
+
+                            IconButton(
+                                onClick = onToggleSound,
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(ArcadeSurfaceContainerHighest)
-                                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                    .size(34.dp)
+                                    .clip(CircleShape)
+                                    .background(ArcadeSurfaceContainer)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Timer,
-                                    contentDescription = null,
-                                    tint = ArcadeTertiary,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "${turnTimerSeconds}s",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = ArcadeTertiary
+                                    imageVector = if (isSoundMuted) Icons.Default.VolumeMute else Icons.Default.VolumeUp,
+                                    contentDescription = "Toggle Sound",
+                                    tint = ArcadeOnSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
 
-                            // Forfeit / surrender button
                             IconButton(
                                 onClick = { showSurrenderDialog = true },
                                 modifier = Modifier
-                                    .size(32.dp)
+                                    .size(34.dp)
                                     .clip(CircleShape)
-                                    .background(Color(0xFFFFDAD6))
-                                    .testTag("forfeit_match_btn")
+                                    .background(ArcadeSurfaceContainer)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Flag,
-                                    contentDescription = "Forfeit",
-                                    tint = Color(0xFFBA1A1A),
-                                    modifier = Modifier.size(16.dp)
+                                    contentDescription = "Surrender",
+                                    tint = Color(0xFFE57373),
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         }
                     }
-                }
 
-                // 2. Dual Player Head-to-Head Card
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = ArcadeSurfaceContainerLowest),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
+                    // Row 2: Duel Scoreboard Strip (YOU vs OPPONENT with center Timer & Turn)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(10.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(ArcadeSurfaceContainer)
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Player 1 (User)
-                        Card(
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = CardDefaults.cardColors(containerColor = ArcadePrimaryFixed.copy(alpha = 0.4f))
+                        // Player 1 (YOU)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Column(
-                                modifier = Modifier.padding(10.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(28.dp)
-                                                .clip(CircleShape)
-                                                .background(ArcadePrimaryContainer),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.SportsEsports,
-                                                contentDescription = null,
-                                                tint = Color.White,
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = "YOU",
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Black,
-                                            color = ArcadeOnSurface
-                                        )
-                                    }
-                                    Text(
-                                        text = "🔥 4x",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = ArcadeTertiary
-                                    )
-                                }
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "$p1Lines/5 Lines",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Black,
-                                        color = ArcadePrimary
-                                    )
-
-                                    // 5 progress dashes
-                                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                                        for (i in 1..5) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(width = 8.dp, height = 12.dp)
-                                                    .clip(RoundedCornerShape(2.dp))
-                                                    .background(
-                                                        if (i <= p1Lines) ArcadeSecondaryContainer else ArcadeSurfaceContainerHighest
-                                                    )
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // Player 2 (Opponent)
-                        Card(
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = CardDefaults.cardColors(containerColor = ArcadeSurfaceContainerHigh)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(10.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(28.dp)
-                                                .clip(CircleShape)
-                                                .background(ArcadeInverseSurface),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.SmartToy,
-                                                contentDescription = null,
-                                                tint = Color.White,
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = opponentName,
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = ArcadeOnSurface,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                }
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "$p2Lines/5 Lines",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Black,
-                                        color = ArcadeOnSurfaceVariant
-                                    )
-
-                                    // 5 progress dashes
-                                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                                        for (i in 1..5) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(width = 8.dp, height = 12.dp)
-                                                    .clip(RoundedCornerShape(2.dp))
-                                                    .background(
-                                                        if (i <= p2Lines) ArcadeSecondary else ArcadeSurfaceContainerHighest
-                                                    )
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // 3. Dynamic Arcade B-I-N-G-O Strike Bar
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = ArcadeSurfaceContainerLowest)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        val letters = listOf("B", "I", "N", "G", "O")
-                        letters.forEachIndexed { index, letter ->
-                            val isCompleted = index < p1Lines
                             Box(
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(
-                                        if (isCompleted) {
-                                            Brush.verticalGradient(listOf(ArcadeSecondaryFixed, ArcadeSecondaryContainer))
-                                        } else {
-                                            Brush.verticalGradient(listOf(ArcadeSurfaceContainer, ArcadeSurfaceContainerHigh))
-                                        }
-                                    )
-                                    .padding(vertical = 8.dp),
+                                    .size(34.dp)
+                                    .clip(CircleShape)
+                                    .background(ArcadePrimaryContainer)
+                                    .border(1.5.dp, if (isUserTurn) TournamentGold else Color.Transparent, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        text = letter,
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Black,
-                                        color = if (isCompleted) ArcadeOnSecondary else ArcadeOnSurfaceVariant
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = if (isCompleted) "LINE ${index + 1}" else "${5 - p1Lines} Left",
-                                        fontSize = 8.sp,
-                                        fontWeight = FontWeight.Black,
-                                        color = if (isCompleted) ArcadeOnSecondary else ArcadeOutline
-                                    )
-                                }
+                                Text(
+                                    text = if (isFriendMode) "P1" else "ME",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.White
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = if (isFriendMode) "Player 1" else "YOU",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = ArcadeOnSurface
+                                )
+                                Text(
+                                    text = "$p1Lines/5 Lines",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = if (p1Lines >= 5) EmeraldWin else TournamentGold
+                                )
                             }
                         }
-                    }
-                }
 
-                // 4. Turn Indicator Banner & Call History Strip
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = ArcadePrimary)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                        // Center: Turn Pill + Countdown
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(10.dp)
-                                        .clip(CircleShape)
-                                        .background(if (isUserTurn) TournamentGold else Color.White)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
+                            Box(
+                                modifier = Modifier
+                                    .scale(if (isUserTurn) pulseScale else 1f)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(
+                                        if (isUserTurn) ArcadePrimaryContainer else ArcadeSecondaryContainer
+                                    )
+                                    .padding(horizontal = 10.dp, vertical = 3.dp)
+                            ) {
                                 Text(
-                                    text = if (isUserTurn) "YOUR TURN — Pick a Number!" else "Opponent Thinking...",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.ExtraBold,
+                                    text = if (isUserTurn) "YOUR TURN" else if (state.isComputerThinking) "AI THINKING" else "OPPONENT",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Black,
                                     color = Color.White
                                 )
                             }
 
-                            if (state.lastCutNumber != null) {
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(Color.Black.copy(alpha = 0.25f))
-                                        .padding(horizontal = 8.dp, vertical = 2.dp)
-                                ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Timer,
+                                    contentDescription = null,
+                                    tint = if (turnTimerSeconds <= 5) Color(0xFFFF5252) else ArcadeOnSurfaceVariant,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = "${turnTimerSeconds}s",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (turnTimerSeconds <= 5) Color(0xFFFF5252) else ArcadeOnSurfaceVariant
+                                )
+                            }
+                        }
+
+                        // Player 2 (OPPONENT)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(
+                                    text = opponentName,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = ArcadeOnSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = "$p2Lines/5 Lines",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = if (p2Lines >= 5) EmeraldWin else ArcadeTertiary
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .clip(CircleShape)
+                                    .background(ArcadeTertiaryContainer)
+                                    .border(1.5.dp, if (!isUserTurn) TournamentGold else Color.Transparent, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (state.gameMode == GameMode.VS_COMPUTER) {
+                                    Icon(
+                                        imageVector = Icons.Default.SmartToy,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                } else {
                                     Text(
-                                        text = "Recent: #${state.lastCutNumber}",
+                                        text = if (isFriendMode) "P2" else "OP",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Black,
-                                        color = TournamentGold
+                                        color = Color.White
                                     )
                                 }
                             }
                         }
+                    }
 
-                        // Countdown Progress Bar
-                        val turnProgress = (turnTimerSeconds / 15f).coerceIn(0f, 1f)
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(5.dp)
-                                .clip(RoundedCornerShape(3.dp))
-                                .background(Color.White.copy(alpha = 0.2f))
-                        ) {
+                    // Row 3: B - I - N - G - O Marquee Letters
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val letters = listOf("B", "I", "N", "G", "O")
+                        letters.forEachIndexed { index, letter ->
+                            val isStruck = p1Lines > index
+                            val animBg by animateColorAsState(
+                                targetValue = if (isStruck) TournamentGold else ArcadeSurfaceContainerHigh,
+                                label = "bingoBg"
+                            )
+                            val animTextColor by animateColorAsState(
+                                targetValue = if (isStruck) Color.Black else ArcadeInverseOnSurface.copy(alpha = 0.8f),
+                                label = "bingoText"
+                            )
+
                             Box(
                                 modifier = Modifier
-                                    .fillMaxWidth(turnProgress)
-                                    .height(5.dp)
-                                    .clip(RoundedCornerShape(3.dp))
-                                    .background(TournamentGold)
+                                    .weight(1f)
+                                    .padding(horizontal = 3.dp)
+                                    .height(28.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(animBg)
+                                    .border(
+                                        1.dp,
+                                        if (isStruck) Color.White else Color.Transparent,
+                                        RoundedCornerShape(8.dp)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        text = letter,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = animTextColor
+                                    )
+                                    if (isStruck) {
+                                        Spacer(modifier = Modifier.width(2.dp))
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = null,
+                                            tint = Color.Black,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        bottomBar = {
+            // Fixed Bottom Action Bar: Reactions & Claim Bingo CTA (Guaranteed non-overflowing)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = ArcadeInverseSurface,
+                shadowElevation = 12.dp
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Quick Chat Reactions Strip
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        items(listOf("🔥 GG!", "👏 Nice!", "⚡ Fast!", "😎 Watch me!", "🍀 Lucky!", "😱 Wow!")) { reaction ->
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(ArcadeSurfaceContainer)
+                                    .clickable { onSendReaction(reaction) }
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = reaction,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = ArcadeInverseOnSurface
+                                )
+                            }
+                        }
+                    }
+
+                    // Primary Match CTA: "CLAIM BINGO" Button
+                    Button(
+                        onClick = {
+                            if (p1Lines >= 5) {
+                                // Winning state trigger handled automatically by ViewModel/Referee
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (p1Lines >= 5) EmeraldWin else ArcadeSurfaceContainerHigh,
+                            disabledContainerColor = ArcadeSurfaceContainer
+                        ),
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(46.dp)
+                            .shadow(if (p1Lines >= 5) 8.dp else 2.dp, RoundedCornerShape(14.dp))
+                            .testTag("claim_bingo_cta")
+                    ) {
+                        Icon(
+                            imageVector = if (p1Lines >= 5) Icons.Default.Celebration else Icons.Default.Star,
+                            contentDescription = null,
+                            tint = if (p1Lines >= 5) Color.White else TournamentGold,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (p1Lines >= 5) {
+                                "🎉 BINGO ACHIEVED! CLAIM VICTORY 🎉"
+                            } else {
+                                "CLAIM BINGO ($p1Lines/5 LINES COMPLETE)"
+                            },
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Black,
+                            color = if (p1Lines >= 5) Color.White else ArcadeOnSurface,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                }
+            }
+        }
+    ) { innerPadding ->
+        // Center Section: Fully Responsive 5x5 Game Arena Board
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 14.dp, vertical = 6.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 420.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Turn Instruction & Call Telemetry Bar
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(ArcadeSurfaceContainer)
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(if (isUserTurn) EmeraldWin else ArcadeSecondary)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (isUserTurn) "TAP ANY NUMBER TO STRIKE" else "$opponentName is choosing...",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isUserTurn) EmeraldWin else ArcadeOnSurfaceVariant
+                        )
+                    }
+
+                    if (state.lastCutNumber != null) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "Last Call: ",
+                                fontSize = 11.sp,
+                                color = ArcadeOnSurfaceVariant
                             )
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(ArcadeTertiaryContainer)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "#${state.lastCutNumber}",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.White
+                                )
+                            }
                         }
                     }
                 }
 
-                // 5. 5x5 Matrix Game Board in Tactical Slate Inverse Surface
+                // Tactile Arcade 5x5 Board Bezel
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f),
+                    shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.cardColors(containerColor = ArcadeInverseSurface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+                    elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                    border = BorderStroke(1.5.dp, ArcadeSurfaceContainerHigh)
                 ) {
                     Column(
                         modifier = Modifier
-                            .fillMaxWidth()
+                            .fillMaxSize()
                             .padding(8.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         for (r in 0 until 5) {
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f),
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 for (c in 0 until 5) {
@@ -556,14 +635,27 @@ fun ClassicBingoGameScreen(
                                     Box(
                                         modifier = Modifier
                                             .weight(1f)
-                                            .aspectRatio(1f)
+                                            .fillMaxSize()
                                             .clip(RoundedCornerShape(10.dp))
                                             .background(
                                                 when {
                                                     isLastCut -> ArcadeTertiaryContainer
-                                                    isCut -> ArcadeSecondaryFixed
+                                                    isCut -> Color(0xFF261D22)
                                                     else -> ArcadeSurfaceContainerLowest
                                                 }
+                                            )
+                                            .border(
+                                                width = when {
+                                                    isLastCut -> 2.dp
+                                                    isCut -> 1.dp
+                                                    else -> 1.dp
+                                                },
+                                                color = when {
+                                                    isLastCut -> TournamentGold
+                                                    isCut -> RedPenStrike.copy(alpha = 0.5f)
+                                                    else -> ArcadeSurfaceContainerHigh
+                                                },
+                                                shape = RoundedCornerShape(10.dp)
                                             )
                                             .clickable(enabled = isUserTurn && !isCut && cellNum > 0) {
                                                 onCutNumber(cellNum)
@@ -573,22 +665,34 @@ fun ClassicBingoGameScreen(
                                     ) {
                                         Text(
                                             text = if (cellNum > 0) cellNum.toString() else "",
-                                            fontSize = 17.sp,
+                                            fontSize = 18.sp,
                                             fontWeight = FontWeight.Black,
                                             color = when {
                                                 isLastCut -> Color.White
-                                                isCut -> ArcadeOnSurface
+                                                isCut -> ArcadeOnSurface.copy(alpha = 0.35f)
                                                 else -> ArcadeOnSurface
                                             }
                                         )
 
-                                        // Stamped ✕ over marked numbers
+                                        // Arcade Red Pen Stamped Strike
                                         if (isCut) {
                                             Text(
                                                 text = "✕",
-                                                fontSize = 26.sp,
+                                                fontSize = 28.sp,
                                                 fontWeight = FontWeight.Black,
                                                 color = if (isLastCut) Color.White.copy(alpha = 0.9f) else RedPenStrike.copy(alpha = 0.85f)
+                                            )
+                                        }
+
+                                        // Callout badge for the latest called number
+                                        if (isLastCut) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .align(Alignment.TopEnd)
+                                                    .padding(2.dp)
+                                                    .size(6.dp)
+                                                    .clip(CircleShape)
+                                                    .background(TournamentGold)
                                             )
                                         }
                                     }
@@ -597,130 +701,11 @@ fun ClassicBingoGameScreen(
                         }
                     }
                 }
-
-                // 6. Quick Social Reaction Chips
-                LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(listOf("GG! 🔥", "Nice Move! 👏", "Too Fast! ⚡", "Watch this! 😎", "Lucky! 🍀")) { reaction ->
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(ArcadeSurfaceContainerHigh)
-                                .clickable { onSendReaction(reaction) }
-                                .padding(horizontal = 12.dp, vertical = 6.dp)
-                        ) {
-                            Text(
-                                text = reaction,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = ArcadeOnSurface
-                            )
-                        }
-                    }
-                }
-
-                // 7. Primary Match Action Bar & Call Bingo Button
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = ArcadeSurfaceContainerLowest)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconButton(
-                                onClick = { onSendReaction("🎉 Bingo Pulse!") },
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(ArcadeSurfaceContainerHigh)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Chat,
-                                    contentDescription = "Quick Chat",
-                                    tint = ArcadeOnSurface,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                            }
-
-                            Button(
-                                onClick = {
-                                    if (p1Lines >= 5) {
-                                        // Auto wins or finishes
-                                    }
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (p1Lines >= 5) EmeraldWin else ArcadeSecondaryContainer
-                                ),
-                                shape = RoundedCornerShape(14.dp),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(48.dp)
-                                    .testTag("claim_bingo_cta")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Star,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = if (p1Lines >= 5) "BINGO ACHIEVED! 🏆" else "CLAIM BINGO! ($p1Lines/5)",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = Color.White
-                                )
-                            }
-                        }
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.Info,
-                                    contentDescription = null,
-                                    tint = ArcadePrimary,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "Strike 5 lines to trigger Bingo",
-                                    fontSize = 11.sp,
-                                    color = ArcadeOnSurfaceVariant
-                                )
-                            }
-                            Text(
-                                text = "${(5 - p1Lines).coerceAtLeast(0)} LINES LEFT",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Black,
-                                color = ArcadeTertiary
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
 
-    // Modal: Surrender Confirmation
+    // Modal: Surrender Confirmation Dialog
     if (showSurrenderDialog) {
         Dialog(onDismissRequest = { showSurrenderDialog = false }) {
             Surface(
@@ -752,14 +737,14 @@ fun ClassicBingoGameScreen(
                     }
 
                     Text(
-                        text = "Surrender Match?",
+                        text = "Concede Match?",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = ArcadeOnSurface
                     )
 
                     Text(
-                        text = "Conceding will award the duel victory to $opponentName. Keep playing to finish the round!",
+                        text = "Conceding will award the victory to $opponentName. Keep playing to finish the round!",
                         fontSize = 13.sp,
                         color = ArcadeOnSurfaceVariant,
                         textAlign = TextAlign.Center
@@ -795,7 +780,7 @@ fun ClassicBingoGameScreen(
         }
     }
 
-    // Modal: Game Over / Victory
+    // Modal: Game Over / Victory Dialog
     if (state.matchOutcome != MatchOutcome.IN_PROGRESS) {
         Dialog(onDismissRequest = {}) {
             Surface(
@@ -812,6 +797,7 @@ fun ClassicBingoGameScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     val isWin = state.matchOutcome == MatchOutcome.PLAYER_WON
+
                     Box(
                         modifier = Modifier
                             .size(64.dp)
