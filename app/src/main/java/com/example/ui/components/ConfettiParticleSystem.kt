@@ -4,8 +4,10 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -38,9 +40,10 @@ enum class ParticleShape {
 fun ConfettiParticleSystem(
     modifier: Modifier = Modifier,
     isTriggered: Boolean = true,
-    particleCount: Int = 100
+    particleCount: Int = 40
 ) {
-    val particles = remember { mutableStateListOf<Particle>() }
+    var frameTick by remember { mutableIntStateOf(0) }
+    val particles = remember { ArrayList<Particle>() }
 
     LaunchedEffect(isTriggered) {
         if (isTriggered) {
@@ -53,45 +56,47 @@ fun ConfettiParticleSystem(
                 Color(0xFF76FF03), // Lime
                 Color(0xFFFF9100)  // Orange
             )
-            for (i in 0 until particleCount) {
+            for (i in 0 until particleCount.coerceIn(20, 50)) {
                 particles.add(
                     Particle(
-                        x = Random.nextFloat(), // 0.0 to 1.0 fraction of screen
-                        y = -0.05f - Random.nextFloat() * 0.2f, // start above top
+                        x = Random.nextFloat(),
+                        y = -0.05f - Random.nextFloat() * 0.2f,
                         vx = (Random.nextFloat() - 0.5f) * 0.005f,
-                        vy = 0.008f + Random.nextFloat() * 0.015f,
+                        vy = 0.008f + Random.nextFloat() * 0.012f,
                         color = colors.random(),
-                        size = 12f + Random.nextFloat() * 18f,
+                        size = 10f + Random.nextFloat() * 14f,
                         rotation = Random.nextFloat() * 360f,
-                        vRot = (Random.nextFloat() - 0.5f) * 10f,
+                        vRot = (Random.nextFloat() - 0.5f) * 8f,
                         alpha = 1.0f,
                         shape = ParticleShape.entries.toTypedArray().random()
                     )
                 )
             }
 
-            while (particles.isNotEmpty()) {
+            var isRunning = true
+            while (isRunning && particles.isNotEmpty()) {
                 withFrameNanos {
                     for (p in particles) {
                         p.x += p.vx
                         p.y += p.vy
-                        p.vy += 0.0001f // gravity
+                        p.vy += 0.0001f
                         p.rotation += p.vRot
                         if (p.y > 0.8f) {
-                            p.alpha -= 0.02f
+                            p.alpha -= 0.025f
                         }
                     }
                     particles.removeAll { it.y > 1.2f || it.alpha <= 0f }
+                    frameTick++
+                    if (particles.isEmpty()) isRunning = false
                 }
             }
         }
     }
 
-    if (particles.isNotEmpty()) {
+    if (particles.isNotEmpty() && frameTick >= 0) {
         Canvas(modifier = modifier.fillMaxSize()) {
             val width = size.width
             val height = size.height
-
             for (p in particles) {
                 val px = p.x * width
                 val py = p.y * height

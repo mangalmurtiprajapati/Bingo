@@ -19,6 +19,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.delay
 import com.example.model.BingoTheme
 import com.example.model.GameMode
 import com.example.ui.screens.AchievementsScreen
@@ -179,13 +180,21 @@ fun KidsBingoApp(
                 onBackToHome = {
                     viewModel.stopGame()
                     navController.navigate("home") {
-                        popUpTo("home") { inclusive = true }
+                        popUpTo("home") { inclusive = false }
+                        launchSingleTop = true
                     }
                 }
             )
         }
 
         composable("online_lobby") {
+            LaunchedEffect(classicState.isOnlineMatchReady) {
+                if (classicState.isOnlineMatchReady) {
+                    delay(1000L)
+                    navController.navigate("classic_setup")
+                }
+            }
+
             OnlineLobbyScreen(
                 state = classicState,
                 theme = activeTheme,
@@ -340,6 +349,11 @@ fun KidsBingoApp(
             SettingsScreen(
                 stats = stats,
                 activeTheme = activeTheme,
+                authState = authState,
+                onSignInWithGoogle = { act -> viewModel.signInWithGoogle(act) },
+                onSignInWithFacebook = { act -> viewModel.signInWithFacebook(act) },
+                onSignInAsGuest = { name -> viewModel.signInAsGuest(name) },
+                onSignOut = { viewModel.signOut() },
                 onToggleSound = { enabled ->
                     viewModel.toggleSound(enabled)
                 },

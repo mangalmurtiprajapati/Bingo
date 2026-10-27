@@ -74,6 +74,7 @@ class AuthManager(private val context: Context) {
     fun checkCurrentFirebaseUser() {
         if (!isFirebaseConfigured) {
             Log.d(TAG, "Firebase not yet initialized. Running in local/offline auth mode.")
+            ensureGuestProfile()
             return
         }
         try {
@@ -82,9 +83,32 @@ class AuthManager(private val context: Context) {
             if (user != null) {
                 val mapped = mapFirebaseUser(user)
                 _currentUser.value = mapped
+            } else {
+                ensureGuestProfile()
             }
         } catch (e: Exception) {
             Log.w(TAG, "Error checking current user: ${e.message}")
+            ensureGuestProfile()
+        }
+    }
+
+    fun ensureGuestProfile() {
+        if (_currentUser.value == null) {
+            val prefs = context.getSharedPreferences("arcade_bingo_auth", Context.MODE_PRIVATE)
+            var guestId = prefs.getString("guest_uid", null)
+            var guestName = prefs.getString("guest_name", null)
+            if (guestId == null) {
+                val randNum = (1000..9999).random()
+                guestId = "guest_$randNum"
+                guestName = "Guest_$randNum"
+                prefs.edit().putString("guest_uid", guestId).putString("guest_name", guestName).apply()
+            }
+            _currentUser.value = AuthUser(
+                uid = guestId,
+                displayName = guestName ?: "Guest Player",
+                provider = "GUEST",
+                isAnonymous = true
+            )
         }
     }
 
@@ -330,7 +354,16 @@ class AuthManager(private val context: Context) {
         } catch (e: Exception) {
             Log.w(TAG, "Error clearing credential state: ${e.message}")
         }
-        _currentUser.value = null
+        val randNum = (1000..9999).random()
+        val newGuest = AuthUser(
+            uid = "guest_$randNum",
+            displayName = "Guest_$randNum",
+            provider = "GUEST",
+            isAnonymous = true
+        )
+        val prefs = context.getSharedPreferences("arcade_bingo_auth", Context.MODE_PRIVATE)
+        prefs.edit().putString("guest_uid", newGuest.uid).putString("guest_name", newGuest.displayName).apply()
+        _currentUser.value = newGuest
         _authState.value = AuthState.Idle
     }
 

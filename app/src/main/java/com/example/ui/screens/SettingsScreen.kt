@@ -1,7 +1,9 @@
 package com.example.ui.screens
 
+import android.app.Activity
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,8 +23,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Policy
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Share
@@ -48,6 +55,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -55,6 +63,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.example.auth.AuthState
 import com.example.model.BingoTheme
 import com.example.model.UserStats
 import com.example.ui.components.ArcadeTopHeader
@@ -71,18 +80,30 @@ import com.example.ui.theme.ArcadeSecondaryFixed
 import com.example.ui.theme.ArcadeSurfaceContainer
 import com.example.ui.theme.ArcadeSurfaceContainerHigh
 import com.example.ui.theme.ArcadeSurfaceContainerLowest
+import com.example.ui.theme.TournamentGold
 
 @Composable
 fun SettingsScreen(
     stats: UserStats,
     activeTheme: BingoTheme,
+    authState: AuthState = AuthState.Idle,
+    onSignInWithGoogle: (Activity) -> Unit = {},
+    onSignInWithFacebook: (Activity) -> Unit = {},
+    onSignInAsGuest: (String?) -> Unit = {},
+    onSignOut: () -> Unit = {},
     onToggleSound: (Boolean) -> Unit,
     onToggleMusic: (Boolean) -> Unit,
     onResetData: () -> Unit,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
+    val activity = context as? Activity
+
     var showResetDialog by remember { mutableStateOf(false) }
     var showPrivacyDialog by remember { mutableStateOf(false) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
+
+    val isGuest = stats.loginProvider.equals("GUEST", ignoreCase = true) || stats.loginProvider.isBlank()
 
     BackHandler { onBack() }
 
@@ -92,7 +113,7 @@ fun SettingsScreen(
         topBar = {
             ArcadeTopHeader(
                 title = "Settings",
-                subtitle = "Preferences & Audio",
+                subtitle = "Account & Preferences",
                 coins = stats.coins,
                 gems = stats.gems,
                 onBack = onBack
@@ -113,7 +134,147 @@ fun SettingsScreen(
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Audio Section
+                // 1. Account & Cloud Sync Section
+                Text(
+                    text = "Account & Cloud Sync",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = ArcadeOnSurface
+                )
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = ArcadeSurfaceContainerHigh),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // User Profile Info Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .clip(CircleShape)
+                                    .background(ArcadePrimaryFixed),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = stats.userAvatar.ifBlank { "🎮" },
+                                    fontSize = 22.sp
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stats.userName,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = ArcadeOnSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(
+                                                if (isGuest) ArcadeSurfaceContainerLowest else Color(0xFF2E7D32)
+                                            )
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = if (isGuest) "👤 GUEST ID" else "🌐 ${stats.loginProvider.uppercase()} LINKED",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = if (isGuest) ArcadeOnSurfaceVariant else Color.White
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Level ${stats.level}",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = ArcadeOnSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+
+                        // Auth Action Buttons
+                        if (isGuest) {
+                            Text(
+                                text = "Playing as Guest. Connect Google or Facebook to save coins and play across devices.",
+                                fontSize = 11.sp,
+                                color = ArcadeOnSurfaceVariant
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = { activity?.let { onSignInWithGoogle(it) } },
+                                    colors = ButtonDefaults.buttonColors(containerColor = ArcadePrimary),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.weight(1f).testTag("settings_google_signin")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CloudDone,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Google", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                }
+
+                                Button(
+                                    onClick = { activity?.let { onSignInWithFacebook(it) } },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1877F2)),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.weight(1f).testTag("settings_facebook_signin")
+                                ) {
+                                    Text("Facebook", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                }
+                            }
+                        } else {
+                            Text(
+                                text = "Your account is linked with ${stats.loginProvider}. Progress is backed up automatically.",
+                                fontSize = 11.sp,
+                                color = ArcadeOnSurfaceVariant
+                            )
+
+                            Button(
+                                onClick = { showLogoutDialog = true },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFBA1A1A)),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth().testTag("settings_logout_btn")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Logout,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Log Out / Switch Account", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // 2. Audio & Sensory Section
                 Text(
                     text = "Audio & Sensory",
                     fontSize = 15.sp,
@@ -137,9 +298,9 @@ fun SettingsScreen(
                     onCheckedChange = onToggleMusic
                 )
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
-                // General Section
+                // 3. Application & Safety Section
                 Text(
                     text = "Application & Safety",
                     fontSize = 15.sp,
@@ -161,9 +322,9 @@ fun SettingsScreen(
                     onClick = { }
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                // Danger Zone - Reset Progress
+                // 4. Danger Zone - Reset Progress
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -190,46 +351,145 @@ fun SettingsScreen(
                             onClick = { showResetDialog = true },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFBA1A1A)),
                             shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth().testTag("reset_progress_btn")
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("reset_progress_btn")
                         ) {
-                            Icon(imageVector = Icons.Default.RestartAlt, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                            Icon(
+                                imageVector = Icons.Default.RestartAlt,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("Reset All Data", fontWeight = FontWeight.Bold, color = Color.White)
                         }
                     }
                 }
-
-                Spacer(modifier = Modifier.height(20.dp))
             }
         }
     }
 
-    // Reset Confirmation Dialog
-    if (showResetDialog) {
-        Dialog(onDismissRequest = { showResetDialog = false }) {
+    // Modal: Logout Confirmation
+    if (showLogoutDialog) {
+        Dialog(onDismissRequest = { showLogoutDialog = false }) {
             Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
                 shape = RoundedCornerShape(20.dp),
                 color = ArcadeSurfaceContainerLowest,
-                shadowElevation = 8.dp,
-                modifier = Modifier.fillMaxWidth()
+                shadowElevation = 8.dp
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFFFDAD6)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Logout,
+                            contentDescription = null,
+                            tint = Color(0xFFBA1A1A),
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+
                     Text(
-                        text = "Reset All Progress?",
+                        text = "Log Out of Account?",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = Color(0xFFBA1A1A)
+                        color = ArcadeOnSurface
                     )
+
                     Text(
-                        text = "This will reset your coins, level, unlocked themes, and stats back to default. This action cannot be undone.",
-                        fontSize = 12.sp,
+                        text = "You will be returned to Guest mode. You can sign back into this account anytime.",
+                        fontSize = 13.sp,
                         color = ArcadeOnSurfaceVariant,
                         textAlign = TextAlign.Center
                     )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Button(
+                            onClick = { showLogoutDialog = false },
+                            colors = ButtonDefaults.buttonColors(containerColor = ArcadeSurfaceContainerHigh),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Cancel", color = ArcadeOnSurface, fontWeight = FontWeight.Bold)
+                        }
+
+                        Button(
+                            onClick = {
+                                showLogoutDialog = false
+                                onSignOut()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFBA1A1A)),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Log Out", color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Modal: Reset Confirmation
+    if (showResetDialog) {
+        Dialog(onDismissRequest = { showResetDialog = false }) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                shape = RoundedCornerShape(20.dp),
+                color = ArcadeSurfaceContainerLowest,
+                shadowElevation = 8.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFFFDAD6)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.RestartAlt,
+                            contentDescription = null,
+                            tint = Color(0xFFBA1A1A),
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+
+                    Text(
+                        text = "Confirm Full Reset",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = ArcadeOnSurface
+                    )
+
+                    Text(
+                        text = "Are you sure? This will permanently delete your coin balance, unlocked boards, and player ranking.",
+                        fontSize = 13.sp,
+                        color = ArcadeOnSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -242,6 +502,7 @@ fun SettingsScreen(
                         ) {
                             Text("Cancel", color = ArcadeOnSurface, fontWeight = FontWeight.Bold)
                         }
+
                         Button(
                             onClick = {
                                 showResetDialog = false
@@ -251,7 +512,7 @@ fun SettingsScreen(
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("Confirm Reset", color = Color.White, fontWeight = FontWeight.Bold)
+                            Text("Reset", color = Color.White, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -259,33 +520,45 @@ fun SettingsScreen(
         }
     }
 
-    // Privacy Policy Modal Dialog
+    // Modal: Privacy Policy
     if (showPrivacyDialog) {
         Dialog(onDismissRequest = { showPrivacyDialog = false }) {
             Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
                 shape = RoundedCornerShape(20.dp),
                 color = ArcadeSurfaceContainerLowest,
-                shadowElevation = 8.dp,
-                modifier = Modifier.fillMaxWidth()
+                shadowElevation = 8.dp
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text("Privacy & Family Policy", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = ArcadeOnSurface)
                     Text(
-                        "Arcade Bingo Pulse is a family-friendly game designed for tactical fun. There is zero betting, gambling, or real-money wagering. The game runs safely and locally on your device with optional cloud sync.",
-                        fontSize = 12.sp,
-                        color = ArcadeOnSurfaceVariant,
-                        lineHeight = 16.sp
+                        text = "Privacy & Safety Policy",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = ArcadeOnSurface
                     )
+
+                    Text(
+                        text = "• Arcade Bingo Duel is intended solely for amusement and entertainment.\n" +
+                                "• No real-money gambling, wagering, or cash prizes are offered or permitted.\n" +
+                                "• All in-game coins, gems and power-ups are virtual currency with no monetary value.\n" +
+                                "• User stats and achievements are saved locally or via secure cloud account linking.",
+                        fontSize = 13.sp,
+                        color = ArcadeOnSurfaceVariant,
+                        lineHeight = 18.sp
+                    )
+
                     Button(
                         onClick = { showPrivacyDialog = false },
                         colors = ButtonDefaults.buttonColors(containerColor = ArcadePrimary),
                         shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.align(Alignment.End)
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Close", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text("Understood", color = Color.White, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -302,34 +575,48 @@ private fun SettingToggleItem(
     onCheckedChange: (Boolean) -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth().shadow(1.dp, RoundedCornerShape(16.dp)),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = ArcadeSurfaceContainerLowest)
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = ArcadeSurfaceContainerHigh)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f).padding(end = 12.dp)
+                modifier = Modifier.weight(1f)
             ) {
                 Box(
                     modifier = Modifier
                         .size(38.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(ArcadePrimaryFixed),
+                        .clip(CircleShape)
+                        .background(ArcadeSurfaceContainerLowest),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(imageVector = icon, contentDescription = null, tint = ArcadePrimary, modifier = Modifier.size(20.dp))
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = ArcadePrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ArcadeOnSurface)
-                    Text(text = subtitle, fontSize = 11.sp, color = ArcadeOnSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        text = title,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ArcadeOnSurface
+                    )
+                    Text(
+                        text = subtitle,
+                        fontSize = 11.sp,
+                        color = ArcadeOnSurfaceVariant
+                    )
                 }
             }
 
@@ -338,7 +625,9 @@ private fun SettingToggleItem(
                 onCheckedChange = onCheckedChange,
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = Color.White,
-                    checkedTrackColor = ArcadePrimary
+                    checkedTrackColor = ArcadePrimary,
+                    uncheckedThumbColor = ArcadeOnSurfaceVariant,
+                    uncheckedTrackColor = ArcadeSurfaceContainer
                 )
             )
         }
@@ -355,39 +644,57 @@ private fun SettingActionItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(1.dp, RoundedCornerShape(16.dp))
-            .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = ArcadeSurfaceContainerLowest)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = ArcadeSurfaceContainerHigh)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f).padding(end = 12.dp)
+                modifier = Modifier.weight(1f)
             ) {
                 Box(
                     modifier = Modifier
                         .size(38.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(ArcadeSecondaryFixed),
+                        .clip(CircleShape)
+                        .background(ArcadeSurfaceContainerLowest),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(imageVector = icon, contentDescription = null, tint = ArcadeSecondary, modifier = Modifier.size(20.dp))
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = ArcadeSecondary,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ArcadeOnSurface)
-                    Text(text = subtitle, fontSize = 11.sp, color = ArcadeOnSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        text = title,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ArcadeOnSurface
+                    )
+                    Text(
+                        text = subtitle,
+                        fontSize = 11.sp,
+                        color = ArcadeOnSurfaceVariant
+                    )
                 }
             }
 
-            Icon(imageVector = Icons.Default.ChevronRight, contentDescription = null, tint = ArcadeOutlineVariant, modifier = Modifier.size(20.dp))
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = ArcadeOnSurfaceVariant,
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }

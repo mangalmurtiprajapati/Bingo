@@ -36,6 +36,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Celebration
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Lock
@@ -58,11 +60,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -147,7 +151,22 @@ fun OnlineLobbyScreen(
     var challengeTargetName by remember { mutableStateOf("") }
     var challengeTargetRank by remember { mutableStateOf("") }
 
-    val activeRoomCode = state.roomCode ?: "7842"
+    val activeRoomCode = if (state.roomCode.isNotBlank() && state.roomCode != "0000") state.roomCode else "4829"
+
+    // Auto-create private room in Firestore when opening Private tab
+    LaunchedEffect(selectedTab) {
+        if (selectedTab == "private" && (state.roomCode.isBlank() || state.roomCode == "0000")) {
+            onCreateRoom()
+        }
+    }
+
+    // Auto navigate host & guest together when match is ready
+    LaunchedEffect(state.isOnlineMatchReady) {
+        if (state.isOnlineMatchReady) {
+            delay(1200L)
+            onProceedToSetup()
+        }
+    }
 
     // Infinite animation for live radar sweep
     val infiniteTransition = rememberInfiniteTransition(label = "radar")
@@ -547,6 +566,43 @@ fun OnlineLobbyScreen(
                                             }
                                         }
 
+                                        Spacer(modifier = Modifier.height(8.dp))
+
+                                        // Live room connection status badge
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .background(
+                                                    if (state.isOnlineMatchReady) Color(0xFF2E7D32) else ArcadeSurfaceContainerLowest
+                                                )
+                                                .border(
+                                                    1.dp,
+                                                    if (state.isOnlineMatchReady) TournamentGold else ArcadePrimary.copy(alpha = 0.3f),
+                                                    RoundedCornerShape(12.dp)
+                                                )
+                                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                if (state.isOnlineMatchReady) {
+                                                    Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    Text(
+                                                        text = "OPPONENT JOINED! STARTING DUEL...",
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Black,
+                                                        color = Color.White
+                                                    )
+                                                } else {
+                                                    Text(
+                                                        text = "⏳ WAITING FOR FRIEND TO ENTER PIN...",
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = ArcadePrimary
+                                                    )
+                                                }
+                                            }
+                                        }
+
                                         Spacer(modifier = Modifier.height(10.dp))
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
@@ -592,6 +648,21 @@ fun OnlineLobbyScreen(
                                                 )
                                                 Spacer(modifier = Modifier.width(4.dp))
                                                 Text("Share Link", color = ArcadeOnSurface, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                            }
+
+                                            IconButton(
+                                                onClick = { onCreateRoom() },
+                                                modifier = Modifier
+                                                    .size(40.dp)
+                                                    .clip(CircleShape)
+                                                    .background(ArcadeSurfaceContainerLowest)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Refresh,
+                                                    contentDescription = "New PIN",
+                                                    tint = ArcadePrimary,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
                                             }
                                         }
                                     }
@@ -917,6 +988,64 @@ fun OnlineLobbyScreen(
                         ) {
                             Text("Duel Now ⚔️", color = Color.White, fontWeight = FontWeight.Black)
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    // Modal: Match Found & Launching Duel
+    if (state.isOnlineMatchReady) {
+        Dialog(onDismissRequest = {}) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                shape = RoundedCornerShape(24.dp),
+                color = ArcadeInverseSurface,
+                shadowElevation = 16.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .background(TournamentGold),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Celebration,
+                            contentDescription = null,
+                            tint = Color.Black,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
+
+                    Text(
+                        text = "MATCH READY! ⚔️",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Black,
+                        color = TournamentGold
+                    )
+
+                    Text(
+                        text = "${state.matchedOpponentName ?: "Opponent"} connected!\nLaunching 1v1 duel arena...",
+                        fontSize = 14.sp,
+                        color = ArcadeInverseOnSurface,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Button(
+                        onClick = onProceedToSetup,
+                        colors = ButtonDefaults.buttonColors(containerColor = TournamentGold),
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Enter Arena 🚀", color = Color.Black, fontWeight = FontWeight.Black)
                     }
                 }
             }

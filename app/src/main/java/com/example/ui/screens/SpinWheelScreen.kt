@@ -440,6 +440,20 @@ fun SpinWheelScreen(
                             }
                         }
 
+                        val textPaint = remember {
+                            android.graphics.Paint().apply {
+                                color = android.graphics.Color.WHITE
+                                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                                textAlign = android.graphics.Paint.Align.RIGHT
+                                setShadowLayer(4f, 1f, 1f, android.graphics.Color.argb(180, 0, 0, 0))
+                            }
+                        }
+                        val iconPaint = remember {
+                            android.graphics.Paint().apply {
+                                textAlign = android.graphics.Paint.Align.CENTER
+                            }
+                        }
+
                         // Rotating 8-slice wheel with numbers & icons
                         Canvas(
                             modifier = Modifier
@@ -448,6 +462,8 @@ fun SpinWheelScreen(
                         ) {
                             val sliceAngle = 45f
                             val radius = size.width / 2f
+                            textPaint.textSize = 14.sp.toPx()
+                            iconPaint.textSize = 15.sp.toPx()
 
                             for (i in 0 until 8) {
                                 val startA = i * sliceAngle
@@ -470,17 +486,6 @@ fun SpinWheelScreen(
                             // Render amount and icon text on each slice
                             drawIntoCanvas { canvas ->
                                 val native = canvas.nativeCanvas
-                                val textPaint = android.graphics.Paint().apply {
-                                    color = android.graphics.Color.WHITE
-                                    textSize = 14.sp.toPx()
-                                    typeface = android.graphics.Typeface.DEFAULT_BOLD
-                                    textAlign = android.graphics.Paint.Align.RIGHT
-                                    setShadowLayer(4f, 1f, 1f, android.graphics.Color.argb(180, 0, 0, 0))
-                                }
-                                val iconPaint = android.graphics.Paint().apply {
-                                    textSize = 15.sp.toPx()
-                                    textAlign = android.graphics.Paint.Align.CENTER
-                                }
 
                                 for (i in 0 until 8) {
                                     val midAngle = i * sliceAngle + 22.5f

@@ -75,6 +75,7 @@ data class ClassicMatchState(
     val currentUserId: String = "",
     val activeChallengeId: String? = null,
     val isHost: Boolean = true,
+    val isOnlineMatchReady: Boolean = false,
     val friendsList: List<FriendProfile> = listOf(
         FriendProfile("Rohan_Star", 3, "Won 12 duels", isOnline = true, avatarEmoji = "🔥"),
         FriendProfile("Priya_Mind", 2, "Won 8 duels", isOnline = true, avatarEmoji = "🌸"),
@@ -141,6 +142,7 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
     private var computerTurnJob: Job? = null
     private var uncalledNumbers = (1..75).shuffled().toMutableList()
     private var lastReceivedReactionTimestamp: Long = 0L
+    private var registeredUserId: String? = null
 
     init {
         viewModelScope.launch {
@@ -154,7 +156,10 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
                 // Sync current user presence and listen for incoming duel challenges in Firebase
                 val currentUid = authManager.currentUser.value?.uid ?: "player_${stats.userName.lowercase().replace(" ", "_")}"
                 _classicState.value = _classicState.value.copy(currentUserId = currentUid)
-                registerAndListenOnline(currentUid, stats)
+                if (registeredUserId != currentUid || onlinePresenceJob?.isActive != true) {
+                    registeredUserId = currentUid
+                    registerAndListenOnline(currentUid, stats)
+                }
             }
         }
         viewModelScope.launch {
@@ -226,7 +231,7 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
         ballCallJob?.cancel()
         ballCallJob = viewModelScope.launch {
             val interval = _gameState.value.difficulty.intervalMs
-            val steps = 20
+            val steps = 5
 
             while (_gameState.value.status == GameStatus.PLAYING && uncalledNumbers.isNotEmpty()) {
                 // Countdown tick animation
@@ -236,9 +241,10 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
                     if (_gameState.value.status != GameStatus.PLAYING) return@launch
                 }
 
-                if (uncalledNumbers.isEmpty()) break
+                val nextNum = synchronized(uncalledNumbers) {
+                    if (uncalledNumbers.isNotEmpty()) uncalledNumbers.removeAt(0) else null
+                } ?: break
 
-                val nextNum = uncalledNumbers.removeAt(0)
                 val updatedCalled = _gameState.value.calledNumbers + nextNum
                 soundManager.playBallCall()
 
@@ -912,7 +918,7 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
     // =========================================================================
 
     fun generateNewOnlineRoom(): String {
-        val code = generateComplexRoomCode()
+        val code = (1000..9999).random().toString()
         val stats = _userStats.value
         val myUid = authManager.currentUser.value?.uid ?: "player_${stats.userName.lowercase().replace(" ", "_")}"
 
@@ -920,8 +926,9 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
             roomCode = code,
             isOnlineSearching = false,
             isHost = true,
+            isOnlineMatchReady = false,
             currentUserId = myUid,
-            onlineStatusMessage = "Room #$code Created! Share code via WhatsApp or In-App Challenge."
+            onlineStatusMessage = "Waiting for friend to enter PIN $code..."
         )
 
         viewModelScope.launch {
@@ -938,21 +945,23 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun joinOnlineRoom(code: String, onJoined: () -> Unit = {}) {
+        val cleanCode = code.trim()
         val stats = _userStats.value
         val myUid = authManager.currentUser.value?.uid ?: "player_${stats.userName.lowercase().replace(" ", "_")}"
 
         _classicState.value = _classicState.value.copy(
-            roomCode = code,
+            roomCode = cleanCode,
             isOnlineSearching = false,
             isHost = false,
+            isOnlineMatchReady = true,
             currentUserId = myUid,
-            onlineStatusMessage = "Joining Room #$code...",
+            onlineStatusMessage = "Joining Room #$cleanCode...",
             gameMode = GameMode.PLAY_ONLINE
         )
 
         viewModelScope.launch {
             val result = firestoreOnlineManager.joinRoom(
-                roomId = code,
+                roomId = cleanCode,
                 guestId = myUid,
                 guestName = stats.userName,
                 guestAvatar = stats.userAvatar
@@ -962,13 +971,14 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
             val oppLevel = _classicState.value.challengeLevel.coerceIn(1, 5)
 
             _classicState.value = _classicState.value.copy(
+                isOnlineMatchReady = true,
                 matchedOpponentName = oppName,
                 matchedOpponentLevel = oppLevel,
-                onlineStatusMessage = "Joined Room #$code! $oppName is ready in duel arena.",
+                onlineStatusMessage = "Joined Room #$cleanCode! Match ready.",
                 gameMode = GameMode.PLAY_ONLINE
             )
-            attachRoomListener(code, myUid)
-            initClassicGame(GameMode.PLAY_ONLINE)
+            attachRoomListener(cleanCode, myUid)
+            initClassicGame(GameMode.PLAY_ONLINE, forcedOpponentName = oppName)
             onJoined()
         }
     }
@@ -1347,6 +1357,21 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
                             matchedOpponentName = oppName,
                             opponentAvatar = if (room.hostId == myUid) (room.guestAvatar ?: "⚔️") else room.hostAvatar
                         )
+                    }
+
+                    // BOTH HOST AND GUEST DETECT MATCH READY!
+                    if (room.guestId != null && !_classicState.value.isOnlineMatchReady) {
+                        val opponentDisplayName = if (room.hostId == myUid) (room.guestName ?: "Friend") else (room.hostName ?: "Host")
+                        val opponentAvatarEmoji = if (room.hostId == myUid) (room.guestAvatar ?: "⚔️") else room.hostAvatar
+                        _classicState.value = _classicState.value.copy(
+                            isOnlineMatchReady = true,
+                            matchedOpponentName = opponentDisplayName,
+                            opponentAvatar = opponentAvatarEmoji,
+                            onlineStatusMessage = "Match Found! $opponentDisplayName joined the room!",
+                            gameMode = GameMode.PLAY_ONLINE
+                        )
+                        soundManager.playWinFanfare()
+                        initClassicGame(GameMode.PLAY_ONLINE, forcedOpponentName = opponentDisplayName)
                     }
 
                     // Opponent made a move!
