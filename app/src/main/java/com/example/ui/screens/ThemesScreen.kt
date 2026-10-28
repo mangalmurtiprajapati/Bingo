@@ -106,6 +106,7 @@ fun ThemesScreen(
     activeTheme: BingoTheme,
     onSelectTheme: (ThemeId) -> Unit,
     onUnlockTheme: (ThemeId, Int) -> Unit,
+    onNavigateToTab: (String) -> Unit = {},
     onBack: () -> Unit
 ) {
     BackHandler { onBack() }
@@ -146,7 +147,13 @@ fun ThemesScreen(
             ArcadeBottomNavigationBar(
                 currentRoute = "themes",
                 onNavigate = { route ->
-                    if (route == "home") onBack()
+                    if (route == "themes") {
+                        // already here
+                    } else if (route == "home") {
+                        onBack()
+                    } else {
+                        onNavigateToTab(route)
+                    }
                 }
             )
         }

@@ -959,6 +959,13 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
                 soundManager.stopAmbientMusic()
                 soundManager.playCrossSound()
                 postOpponentReaction("⚠️ Disqualified: 3 missed turns in a row!")
+                val currentRoom = _activeDuelRoom.value
+                if (currentRoom != null && state.gameMode == GameMode.PLAY_ONLINE && !state.isOnlineBot) {
+                    val oppId = if (state.isHost) currentRoom.guestId ?: "" else currentRoom.hostId
+                    viewModelScope.launch {
+                        firestoreOnlineManager.forfeitRoom(currentRoom.roomId, state.currentUserId, oppId)
+                    }
+                }
                 viewModelScope.launch {
                     repository.recordGameFinished(
                         isWin = false,
@@ -985,6 +992,13 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
                 soundManager.stopAmbientMusic()
                 soundManager.playWinFanfare()
                 postOpponentReaction("🎉 Opponent forfeited after 3 timeouts! Victory!")
+                val currentRoom = _activeDuelRoom.value
+                if (currentRoom != null && state.gameMode == GameMode.PLAY_ONLINE && !state.isOnlineBot) {
+                    val oppId = if (state.isHost) currentRoom.guestId ?: "" else currentRoom.hostId
+                    viewModelScope.launch {
+                        firestoreOnlineManager.forfeitRoom(currentRoom.roomId, oppId, state.currentUserId)
+                    }
+                }
                 viewModelScope.launch {
                     repository.recordGameFinished(
                         isWin = true,
@@ -1009,7 +1023,7 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
     fun generateNewOnlineRoom(): String {
         val code = (1000..9999).random().toString()
         val stats = _userStats.value
-        val myUid = authManager.currentUser.value?.uid ?: "player_${stats.userName.lowercase().replace(" ", "_")}"
+        val myUid = authManager.currentUser.value?.uid ?: "player_${stats.playerId.lowercase().replace("-", "_")}"
 
         _classicState.value = _classicState.value.copy(
             roomCode = code,
@@ -1036,7 +1050,7 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
     fun joinOnlineRoom(code: String, onJoined: () -> Unit = {}) {
         val cleanCode = code.trim()
         val stats = _userStats.value
-        val myUid = authManager.currentUser.value?.uid ?: "player_${stats.userName.lowercase().replace(" ", "_")}"
+        val myUid = authManager.currentUser.value?.uid ?: "player_${stats.playerId.lowercase().replace("-", "_")}"
 
         _classicState.value = _classicState.value.copy(
             roomCode = cleanCode,
@@ -1540,10 +1554,16 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
                     // Opponent made a move!
                     val lastCut = room.lastCutNumber
                     val lastCutBy = room.lastCutBy
+                    val lastCutPlayerId = room.lastCutPlayerId
+                    val isMyCut = if (lastCutPlayerId != null) {
+                        lastCutPlayerId == myUid
+                    } else {
+                        lastCutBy == _userStats.value.userName
+                    }
                     val currentState = _classicState.value
-                    if (lastCut != null && lastCutBy != null && lastCutBy != _userStats.value.userName) {
+                    if (lastCut != null && !isMyCut) {
                         if (!currentState.cutHistory.contains(lastCut)) {
-                            applyRemoteCut(lastCut, lastCutBy, room)
+                            applyRemoteCut(lastCut, lastCutBy ?: "Opponent", room)
                         }
                     }
 
@@ -1573,12 +1593,26 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
                                 xpEarned = 200
                             )
                             soundManager.playWinFanfare()
+                            viewModelScope.launch {
+                                repository.recordGameFinished(
+                                    isWin = true,
+                                    daubsMade = currentState.player1Board.crossedNumbers.size,
+                                    coinsEarned = 300
+                                )
+                            }
                         } else {
                             _classicState.value = currentState.copy(
                                 matchOutcome = MatchOutcome.COMPUTER_OR_PLAYER_2_WON,
                                 coinsEarned = 50,
                                 xpEarned = 50
                             )
+                            viewModelScope.launch {
+                                repository.recordGameFinished(
+                                    isWin = false,
+                                    daubsMade = currentState.player1Board.crossedNumbers.size,
+                                    coinsEarned = 50
+                                )
+                            }
                         }
                     }
                 }
@@ -1742,11 +1776,11 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
     fun signOut() {
         viewModelScope.launch {
             authManager.signOut()
-            repository.updateUserProfile(
-                name = "MindPlayer_${(10..99).random()}",
-                provider = "GUEST",
-                avatar = _userStats.value.userAvatar
-            )
+            val fresh = repository.resetToFreshGuestProfile()
+            _userStats.value = fresh
+            val newUid = "player_${fresh.playerId.lowercase().replace("-", "_")}"
+            _classicState.value = _classicState.value.copy(currentUserId = newUid)
+            registerAndListenOnline(newUid, fresh)
         }
     }
 

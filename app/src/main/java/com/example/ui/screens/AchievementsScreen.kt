@@ -102,6 +102,7 @@ fun AchievementsScreen(
     stats: UserStats,
     activeTheme: BingoTheme,
     onClaimReward: (id: String, coins: Int, xp: Int) -> Unit,
+    onNavigateToTab: (String) -> Unit = {},
     onBack: () -> Unit
 ) {
     BackHandler { onBack() }
@@ -133,7 +134,13 @@ fun AchievementsScreen(
             ArcadeBottomNavigationBar(
                 currentRoute = "achievements",
                 onNavigate = { route ->
-                    if (route == "home") onBack()
+                    if (route == "achievements") {
+                        // already here
+                    } else if (route == "home") {
+                        onBack()
+                    } else {
+                        onNavigateToTab(route)
+                    }
                 }
             )
         }

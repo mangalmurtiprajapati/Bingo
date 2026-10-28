@@ -30,7 +30,9 @@ data class UserStatsEntity(
     val userName: String = "MindPlayer_77",
     val loginProvider: String = "GUEST",
     val userAvatar: String = "🎯",
-    val playerId: String = "MB-7429"
+    val playerId: String = "MB-7429",
+    val rankPoints: Int = 1250,
+    val isVerifiedGamer: Boolean = true
 ) {
     fun toDomain(): UserStats {
         val themesList = unlockedThemeIds.split(",")
@@ -60,7 +62,9 @@ data class UserStatsEntity(
             userName = userName,
             loginProvider = loginProvider,
             userAvatar = userAvatar,
-            playerId = playerId
+            playerId = playerId,
+            rankPoints = rankPoints,
+            isVerifiedGamer = isVerifiedGamer
         )
     }
 
@@ -90,7 +94,9 @@ data class UserStatsEntity(
                 userName = stats.userName,
                 loginProvider = stats.loginProvider,
                 userAvatar = stats.userAvatar,
-                playerId = stats.playerId
+                playerId = stats.playerId,
+                rankPoints = stats.rankPoints,
+                isVerifiedGamer = stats.isVerifiedGamer
             )
         }
     }

@@ -348,6 +348,12 @@ fun ClassicBingoGameScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
+                            val turnText = when {
+                                isUserTurn -> "YOUR TURN"
+                                state.gameMode == GameMode.PLAY_ONLINE -> "${state.matchedOpponentName?.uppercase() ?: "OPPONENT"}'S TURN"
+                                state.isComputerThinking -> "AI THINKING..."
+                                else -> "OPPONENT'S TURN"
+                            }
                             Box(
                                 modifier = Modifier
                                     .scale(if (isUserTurn) pulseScale else 1f)
@@ -358,7 +364,7 @@ fun ClassicBingoGameScreen(
                                     .padding(horizontal = 10.dp, vertical = 3.dp)
                             ) {
                                 Text(
-                                    text = if (isUserTurn) "YOUR TURN" else if (state.isComputerThinking) "AI THINKING" else "OPPONENT",
+                                    text = turnText,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Black,
                                     color = Color.White
@@ -860,31 +866,107 @@ fun ClassicBingoGameScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     val isWin = state.matchOutcome == MatchOutcome.PLAYER_WON
+                    val isTie = state.matchOutcome == MatchOutcome.DRAW
+                    val outcomeTitle = when {
+                        isWin -> "VICTORY! 🏆"
+                        isTie -> "MATCH TIED! 🤝"
+                        else -> "DEFEAT 💔"
+                    }
+                    val outcomeColor = when {
+                        isWin -> EmeraldWin
+                        isTie -> TournamentGold
+                        else -> Color(0xFFFF5252)
+                    }
+                    val rpBadgeText = when {
+                        isWin -> "+35 RP"
+                        isTie -> "+0 RP"
+                        else -> "-25 RP"
+                    }
+                    val rpBadgeColor = when {
+                        isWin -> EmeraldWin
+                        isTie -> TournamentGold
+                        else -> Color(0xFFFF5252)
+                    }
 
                     Box(
                         modifier = Modifier
-                            .size(64.dp)
+                            .size(68.dp)
                             .clip(CircleShape)
-                            .background(if (isWin) TournamentGold.copy(alpha = 0.2f) else ArcadeSurfaceContainerHigh),
+                            .background(outcomeColor.copy(alpha = 0.15f))
+                            .border(2.dp, outcomeColor, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = if (isWin) Icons.Default.Celebration else Icons.Default.EmojiEvents,
-                            contentDescription = null,
-                            tint = if (isWin) TournamentGold else ArcadeOnSurfaceVariant,
-                            modifier = Modifier.size(36.dp)
+                        Text(
+                            text = when {
+                                isWin -> "🏆"
+                                isTie -> "🤝"
+                                else -> "💀"
+                            },
+                            fontSize = 32.sp
                         )
                     }
 
                     Text(
-                        text = if (isWin) "VICTORY! 🏆" else "ROUND FINISHED",
+                        text = outcomeTitle,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Black,
-                        color = if (isWin) ArcadeSecondary else ArcadeOnSurface
+                        color = outcomeColor
                     )
 
+                    // Rank Points & Reward Badge Row
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(rpBadgeColor)
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "⚔️ $rpBadgeText",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color.White
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(ArcadeSurfaceContainerHigh)
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "🪙 +${state.coinsEarned}",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Black,
+                                color = TournamentGold
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(ArcadeSurfaceContainerHigh)
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "⚡ +${state.xpEarned} XP",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Black,
+                                color = ArcadePrimary
+                            )
+                        }
+                    }
+
                     Text(
-                        text = if (isWin) "Incredible daubing speed! You scored 5 Lines first." else "Great duel! Rematch to climb higher on the leaderboards.",
+                        text = when {
+                            isWin -> "Incredible performance! You completed 5 lines first."
+                            isTie -> "Incredible speed! Both players struck 5 lines simultaneously."
+                            else -> if (state.p1ConsecutiveMisses >= 3) "Forfeited after 3 consecutive missed turn timers." else "$opponentName completed 5 lines first."
+                        },
                         fontSize = 13.sp,
                         color = ArcadeOnSurfaceVariant,
                         textAlign = TextAlign.Center

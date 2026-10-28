@@ -72,6 +72,7 @@ data class OnlineDuelRoom(
     val currentTurnPlayerId: String? = null,
     val lastCutNumber: Int? = null,
     val lastCutBy: String? = null,
+    val lastCutPlayerId: String? = null,
     val cutNumbers: List<Int> = emptyList(),
     val hostCompletedLines: Int = 0,
     val guestCompletedLines: Int = 0,

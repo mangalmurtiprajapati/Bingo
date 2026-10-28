@@ -119,6 +119,7 @@ fun SpinWheelScreen(
     activeTheme: BingoTheme,
     soundManager: SoundManager?,
     onRewardEarned: (Int) -> Unit,
+    onNavigateToTab: (String) -> Unit = {},
     onBack: () -> Unit
 ) {
     BackHandler { onBack() }
@@ -182,7 +183,13 @@ fun SpinWheelScreen(
             ArcadeBottomNavigationBar(
                 currentRoute = "spin_wheel",
                 onNavigate = { route ->
-                    if (route == "home") onBack()
+                    if (route == "spin_wheel") {
+                        // already here
+                    } else if (route == "home") {
+                        onBack()
+                    } else {
+                        onNavigateToTab(route)
+                    }
                 }
             )
         }

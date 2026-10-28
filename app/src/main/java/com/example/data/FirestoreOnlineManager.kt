@@ -48,6 +48,21 @@ class FirestoreOnlineManager {
     val currentUserId: String
         get() = auth?.currentUser?.uid ?: "guest_${UUID.randomUUID().toString().take(6)}"
 
+    /**
+     * Ensures the device has an authenticated Firebase user context (anonymous or registered).
+     */
+    suspend fun ensureAuth(): String {
+        val a = auth ?: return currentUserId
+        val user = a.currentUser
+        if (user != null) return user.uid
+        return try {
+            val res = a.signInAnonymously().await()
+            res.user?.uid ?: currentUserId
+        } catch (e: Exception) {
+            currentUserId
+        }
+    }
+
     // =========================================================================
     // USER PRESENCE & PROFILE
     // =========================================================================
@@ -412,29 +427,23 @@ class FirestoreOnlineManager {
     ): Result<Unit> {
         val fs = firestore ?: return Result.failure(IllegalStateException("Firestore not available"))
         return try {
-            val roomData = mapOf(
+            ensureAuth()
+            val roomData = mutableMapOf<String, Any>(
                 "roomId" to roomId,
                 "hostId" to hostId,
                 "hostName" to hostName,
                 "hostAvatar" to hostAvatar,
-                "guestId" to null,
-                "guestName" to null,
-                "guestAvatar" to null,
                 "status" to RoomStatus.WAITING,
                 "isMatchmaking" to isMatchmaking,
                 "currentTurnPlayerId" to hostId,
-                "lastCutNumber" to null,
-                "lastCutBy" to null,
                 "cutNumbers" to emptyList<Int>(),
                 "hostCompletedLines" to 0,
                 "guestCompletedLines" to 0,
-                "winnerId" to null,
-                "winnerName" to null,
                 "createdAt" to System.currentTimeMillis(),
                 "updatedAt" to System.currentTimeMillis()
             )
             fs.collection(ROOMS_COLLECTION).document(roomId)
-                .set(roomData)
+                .set(roomData, SetOptions.merge())
                 .await()
             Log.d(TAG, "Room created: $roomId (isMatchmaking=$isMatchmaking)")
             Result.success(Unit)
@@ -457,6 +466,7 @@ class FirestoreOnlineManager {
     ): Result<Unit> {
         val fs = firestore ?: return Result.failure(IllegalStateException("Firestore not available"))
         return try {
+            ensureAuth()
             val statusToSet = if (asChallenge) RoomStatus.CHALLENGE_PENDING else RoomStatus.PLAYERS_JOINED
             fs.collection(ROOMS_COLLECTION).document(roomId)
                 .set(
@@ -612,6 +622,7 @@ class FirestoreOnlineManager {
                                 currentTurnPlayerId = snapshot.getString("currentTurnPlayerId"),
                                 lastCutNumber = (snapshot.getLong("lastCutNumber"))?.toInt(),
                                 lastCutBy = snapshot.getString("lastCutBy"),
+                                lastCutPlayerId = snapshot.getString("lastCutPlayerId"),
                                 cutNumbers = cutNumbers,
                                 hostCompletedLines = (snapshot.getLong("hostCompletedLines") ?: 0L).toInt(),
                                 guestCompletedLines = (snapshot.getLong("guestCompletedLines") ?: 0L).toInt(),
@@ -661,6 +672,7 @@ class FirestoreOnlineManager {
                 "cutNumbers" to FieldValue.arrayUnion(number),
                 "lastCutNumber" to number,
                 "lastCutBy" to playerName,
+                "lastCutPlayerId" to playerId,
                 "status" to RoomStatus.IN_PROGRESS,
                 "updatedAt" to System.currentTimeMillis()
             )
@@ -684,10 +696,32 @@ class FirestoreOnlineManager {
             fs.collection(ROOMS_COLLECTION).document(roomId)
                 .update(updates)
                 .await()
-            Log.d(TAG, "Cut number $number in room $roomId by $playerName")
+            Log.d(TAG, "Cut number $number in room $roomId by $playerName (playerId=$playerId)")
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Error cutting number in room: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Forfeits a room when a player misses 3 consecutive turns.
+     */
+    suspend fun forfeitRoom(roomId: String, forfeitedPlayerId: String, winnerId: String): Result<Unit> {
+        val fs = firestore ?: return Result.failure(IllegalStateException("Firestore not available"))
+        return try {
+            fs.collection(ROOMS_COLLECTION).document(roomId)
+                .update(
+                    mapOf(
+                        "status" to RoomStatus.COMPLETED,
+                        "winnerId" to winnerId,
+                        "updatedAt" to System.currentTimeMillis()
+                    )
+                ).await()
+            Log.d(TAG, "Room $roomId forfeited by $forfeitedPlayerId; winner is $winnerId")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error forfeiting room: ${e.message}", e)
             Result.failure(e)
         }
     }

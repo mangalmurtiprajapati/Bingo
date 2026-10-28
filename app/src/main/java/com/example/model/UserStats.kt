@@ -23,9 +23,20 @@ data class UserStats(
     val userName: String = "MindPlayer_77",
     val loginProvider: String = "GUEST", // "GUEST", "GOOGLE", "FACEBOOK"
     val userAvatar: String = "🎯",
-    val playerId: String = "MB-7429"
+    val playerId: String = "MB-7429",
+    val rankPoints: Int = 1250,
+    val isVerifiedGamer: Boolean = true
 ) {
     val xpForNextLevel: Int get() = level * 250
+
+    val rankTierName: String
+        get() = when {
+            rankPoints >= 3000 -> "Grandmaster 🏆"
+            rankPoints >= 2200 -> "Diamond 💎"
+            rankPoints >= 1500 -> "Gold 👑"
+            rankPoints >= 1000 -> "Silver ⚡"
+            else -> "Bronze 🥉"
+        }
 
     fun canSpinWheelToday(): Boolean {
         if (lastDailyRewardTime == 0L) return true

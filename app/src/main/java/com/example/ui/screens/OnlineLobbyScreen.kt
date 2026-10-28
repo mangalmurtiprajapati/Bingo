@@ -144,6 +144,7 @@ fun OnlineLobbyScreen(
     onDeclineHostChallenge: () -> Unit = {},
     onCancelWaitingForHost: () -> Unit = {},
     onProceedToSetup: () -> Unit,
+    onNavigateToTab: (String) -> Unit = {},
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -201,7 +202,13 @@ fun OnlineLobbyScreen(
             ArcadeBottomNavigationBar(
                 currentRoute = "online_lobby",
                 onNavigate = { route ->
-                    if (route == "home") onBack()
+                    if (route == "online_lobby") {
+                        // already here
+                    } else if (route == "home") {
+                        onBack()
+                    } else {
+                        onNavigateToTab(route)
+                    }
                 }
             )
         }

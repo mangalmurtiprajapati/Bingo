@@ -23,7 +23,14 @@ class BingoRepository(private val dao: BingoDao) {
     suspend fun ensureInitialized() {
         val statsEntity = dao.getUserStatsDirect()
         if (statsEntity == null) {
-            dao.insertOrUpdateUserStats(UserStatsEntity.fromDomain(UserStats()))
+            val randomNum = (1000..9999).random()
+            val initialStats = UserStats(
+                userName = "Player_$randomNum",
+                playerId = "MB-$randomNum",
+                rankPoints = 1250,
+                isVerifiedGamer = true
+            )
+            dao.insertOrUpdateUserStats(UserStatsEntity.fromDomain(initialStats))
         }
         val currentAchievements = dao.getAllAchievementsFlow()
         // We can check and populate default achievements
@@ -33,6 +40,19 @@ class BingoRepository(private val dao: BingoDao) {
 
     suspend fun saveUserStats(stats: UserStats) {
         dao.insertOrUpdateUserStats(UserStatsEntity.fromDomain(stats))
+    }
+
+    suspend fun resetToFreshGuestProfile(): UserStats {
+        val randomNum = (1000..9999).random()
+        val current = getCurrentStats()
+        val freshStats = current.copy(
+            userName = "Player_$randomNum",
+            playerId = "MB-$randomNum",
+            loginProvider = "GUEST",
+            isVerifiedGamer = true
+        )
+        saveUserStats(freshStats)
+        return freshStats
     }
 
     suspend fun addCoins(amount: Int) {
@@ -64,6 +84,8 @@ class BingoRepository(private val dao: BingoDao) {
         val bestStreak = maxOf(current.bestStreak, currentStreak)
         val games = current.totalGamesPlayed + 1
         val daubs = current.totalDaubs + daubsMade
+        val rpDelta = if (isWin) 35 else -25
+        val newRp = (current.rankPoints + rpDelta).coerceAtLeast(0)
 
         val updated = current.copy(
             totalGamesPlayed = games,
@@ -71,16 +93,27 @@ class BingoRepository(private val dao: BingoDao) {
             totalLosses = losses,
             currentStreak = currentStreak,
             bestStreak = bestStreak,
-            totalDaubs = daubs
+            totalDaubs = daubs,
+            rankPoints = newRp
         ).addXp(if (isWin) 100 else 25)
 
-        saveUserStats(updated.copy(coins = updated.coins + coinsEarned))
+        saveUserStats(updated.copy(coins = (updated.coins + coinsEarned).coerceAtLeast(0)))
 
         // Update achievements progress
         updateAchievement("first_win", wins)
         updateAchievement("bingo_master_5", wins)
         updateAchievement("bingo_master_20", wins)
         updateAchievement("daub_50", daubs)
+    }
+
+    suspend fun recordGameTie(coinsEarned: Int) {
+        val current = getCurrentStats()
+        val games = current.totalGamesPlayed + 1
+        val updated = current.copy(
+            totalGamesPlayed = games,
+            coins = (current.coins + coinsEarned).coerceAtLeast(0)
+        ).addXp(50)
+        saveUserStats(updated)
     }
 
     suspend fun selectTheme(themeId: ThemeId) {
