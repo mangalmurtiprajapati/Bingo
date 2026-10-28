@@ -1,19 +1,7 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // User presence and profile documents
-    match /users/{userId} {
-      allow read, write: if true;
-    }
-
-    // Friend Challenges collection
-    match /challenges/{challengeId} {
-      allow read, write: if true;
-    }
-
-    // Online Game Duel Rooms & Matchmaking Queue
-    match /rooms/{roomId} {
+    match /{document=**} {
       allow read, write: if true;
     }
   }

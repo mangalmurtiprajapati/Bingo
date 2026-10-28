@@ -47,11 +47,13 @@ data class FriendChallenge(
  */
 object RoomStatus {
     const val WAITING = "WAITING_FOR_PLAYER"
+    const val CHALLENGE_PENDING = "CHALLENGE_PENDING"
     const val PLAYERS_JOINED = "PLAYERS_JOINED"
     const val BOARD_SETUP = "BOARD_SETUP"
     const val IN_PROGRESS = "IN_PROGRESS"
     const val COMPLETED = "COMPLETED"
     const val ABANDONED = "ABANDONED"
+    const val DECLINED = "DECLINED"
 }
 
 /**

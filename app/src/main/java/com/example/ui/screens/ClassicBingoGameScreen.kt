@@ -114,6 +114,7 @@ fun ClassicBingoGameScreen(
     reactions: List<ChatReaction> = emptyList(),
     onSendReaction: (String) -> Unit = {},
     onCutNumber: (Int) -> Unit,
+    onTurnTimeout: () -> Unit = {},
     onRematch: () -> Unit,
     onSwitchBoard: (Int) -> Unit,
     onBackToHome: () -> Unit
@@ -141,12 +142,16 @@ fun ClassicBingoGameScreen(
     val p2Lines = state.player2OrComputerBoard.completedLinesCount
     val opponentName = state.matchedOpponentName ?: if (state.gameMode == GameMode.VS_COMPUTER) "Bot Blitz" else "Opponent"
 
-    // Turn timer countdown
-    LaunchedEffect(state.matchTurn, state.isComputerThinking) {
+    // Turn timer countdown with auto-cut trigger at 0s!
+    LaunchedEffect(state.matchTurn, state.isComputerThinking, state.matchOutcome) {
+        if (state.matchOutcome != MatchOutcome.IN_PROGRESS) return@LaunchedEffect
         turnTimerSeconds = 15
         while (turnTimerSeconds > 0 && state.matchOutcome == MatchOutcome.IN_PROGRESS) {
             delay(1000L)
             turnTimerSeconds--
+        }
+        if (turnTimerSeconds == 0 && state.matchOutcome == MatchOutcome.IN_PROGRESS) {
+            onTurnTimeout()
         }
     }
 
@@ -270,6 +275,10 @@ fun ClassicBingoGameScreen(
                         }
                     }
 
+                    val now = System.currentTimeMillis()
+                    val activeUserReaction = reactions.filter { it.isUser }.lastOrNull()?.takeIf { now - it.timestamp < 4500L }
+                    val activeOpponentReaction = reactions.filter { !it.isUser }.lastOrNull()?.takeIf { now - it.timestamp < 4500L }
+
                     // Row 2: Duel Scoreboard Strip (YOU vs OPPONENT with center Timer & Turn)
                     Row(
                         modifier = Modifier
@@ -280,43 +289,61 @@ fun ClassicBingoGameScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Player 1 (YOU)
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .clip(CircleShape)
-                                    .background(ArcadePrimaryContainer)
-                                    .border(1.5.dp, if (isUserTurn) TournamentGold else Color.Transparent, CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = if (isFriendMode) "P1" else "ME",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = Color.White
-                                )
+                        // Player 1 (YOU) with Reaction Bubble
+                        Column(horizontalAlignment = Alignment.Start) {
+                            AnimatedVisibility(visible = activeUserReaction != null) {
+                                Box(
+                                    modifier = Modifier
+                                        .padding(bottom = 2.dp)
+                                        .clip(RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp, bottomEnd = 10.dp, bottomStart = 2.dp))
+                                        .background(TournamentGold)
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                                ) {
+                                    Text(
+                                        text = activeUserReaction?.content ?: "",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = Color.Black
+                                    )
+                                }
                             }
-                            Column {
-                                Text(
-                                    text = if (isFriendMode) "Player 1" else "YOU",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = ArcadeOnSurface
-                                )
-                                Text(
-                                    text = "$p1Lines/5 Lines",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = if (p1Lines >= 5) EmeraldWin else TournamentGold
-                                )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(ArcadePrimaryContainer)
+                                        .border(2.dp, if (isUserTurn) TournamentGold else Color.Transparent, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = if (isFriendMode) "P1" else "ME",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = Color.White
+                                    )
+                                }
+                                Column {
+                                    Text(
+                                        text = if (isFriendMode) "Player 1" else "YOU",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = ArcadeOnSurface
+                                    )
+                                    Text(
+                                        text = "$p1Lines/5 Lines",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = if (p1Lines >= 5) EmeraldWin else TournamentGold
+                                    )
+                                }
                             }
                         }
 
-                        // Center: Turn Pill + Countdown
+                        // Center: Turn Pill + Countdown & Miss Warning Badge
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(2.dp)
@@ -342,68 +369,103 @@ fun ClassicBingoGameScreen(
                                 Icon(
                                     imageVector = Icons.Default.Timer,
                                     contentDescription = null,
-                                    tint = if (turnTimerSeconds <= 5) Color(0xFFFF5252) else ArcadeOnSurfaceVariant,
+                                    tint = if (turnTimerSeconds <= 5) Color(0xFFFF5252) else TournamentGold,
                                     modifier = Modifier.size(12.dp)
                                 )
                                 Spacer(modifier = Modifier.width(3.dp))
                                 Text(
                                     text = "${turnTimerSeconds}s",
                                     fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (turnTimerSeconds <= 5) Color(0xFFFF5252) else ArcadeOnSurfaceVariant
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = if (turnTimerSeconds <= 5) Color(0xFFFF5252) else Color.White
                                 )
                             }
-                        }
 
-                        // Player 2 (OPPONENT)
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Column(horizontalAlignment = Alignment.End) {
-                                Text(
-                                    text = opponentName,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = ArcadeOnSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    text = "$p2Lines/5 Lines",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = if (p2Lines >= 5) EmeraldWin else ArcadeTertiary
-                                )
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .clip(CircleShape)
-                                    .background(ArcadeTertiaryContainer)
-                                    .border(1.5.dp, if (!isUserTurn) TournamentGold else Color.Transparent, CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (state.gameMode == GameMode.VS_COMPUTER) {
-                                    Icon(
-                                        imageVector = Icons.Default.SmartToy,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                } else {
+                            // 3-Miss Penalty Tracker Indicator
+                            if (state.p1ConsecutiveMisses > 0 || state.p2ConsecutiveMisses > 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(Color(0xFFBA1A1A))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
                                     Text(
-                                        text = if (isFriendMode) "P2" else "OP",
-                                        fontSize = 11.sp,
+                                        text = if (isUserTurn) "⚠️ Timeouts: ${state.p1ConsecutiveMisses}/3" else "⚠️ Opp Timeouts: ${state.p2ConsecutiveMisses}/3",
+                                        fontSize = 9.sp,
                                         fontWeight = FontWeight.Black,
                                         color = Color.White
                                     )
                                 }
                             }
                         }
+
+                        // Player 2 (OPPONENT) with Reaction Bubble
+                        Column(horizontalAlignment = Alignment.End) {
+                            AnimatedVisibility(visible = activeOpponentReaction != null) {
+                                Box(
+                                    modifier = Modifier
+                                        .padding(bottom = 2.dp)
+                                        .clip(RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp, bottomStart = 10.dp, bottomEnd = 2.dp))
+                                        .background(ArcadeTertiaryContainer)
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                                ) {
+                                    Text(
+                                        text = activeOpponentReaction?.content ?: "",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = Color.White
+                                    )
+                                }
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text(
+                                        text = opponentName,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = ArcadeOnSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = "$p2Lines/5 Lines",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = if (p2Lines >= 5) EmeraldWin else ArcadeTertiary
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(ArcadeTertiaryContainer)
+                                        .border(2.dp, if (!isUserTurn) TournamentGold else Color.Transparent, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (state.gameMode == GameMode.VS_COMPUTER) {
+                                        Icon(
+                                            imageVector = Icons.Default.SmartToy,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    } else {
+                                        Text(
+                                            text = if (isFriendMode) "P2" else (state.opponentAvatar.ifBlank { "⚔️" }),
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = Color.White
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
 
-                    // Row 3: B - I - N - G - O Marquee Letters
+                    // Row 3: B - I - N - G - O Marquee Letters (High Contrast)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -413,11 +475,11 @@ fun ClassicBingoGameScreen(
                         letters.forEachIndexed { index, letter ->
                             val isStruck = p1Lines > index
                             val animBg by animateColorAsState(
-                                targetValue = if (isStruck) TournamentGold else ArcadeSurfaceContainerHigh,
+                                targetValue = if (isStruck) TournamentGold else Color(0xFF282029),
                                 label = "bingoBg"
                             )
                             val animTextColor by animateColorAsState(
-                                targetValue = if (isStruck) Color.Black else ArcadeInverseOnSurface.copy(alpha = 0.8f),
+                                targetValue = if (isStruck) Color.Black else Color.White,
                                 label = "bingoText"
                             )
 
@@ -425,13 +487,13 @@ fun ClassicBingoGameScreen(
                                 modifier = Modifier
                                     .weight(1f)
                                     .padding(horizontal = 3.dp)
-                                    .height(28.dp)
+                                    .height(30.dp)
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(animBg)
                                     .border(
-                                        1.dp,
-                                        if (isStruck) Color.White else Color.Transparent,
-                                        RoundedCornerShape(8.dp)
+                                        width = if (isStruck) 2.dp else 1.5.dp,
+                                        color = if (isStruck) Color.White else TournamentGold.copy(alpha = 0.5f),
+                                        shape = RoundedCornerShape(8.dp)
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -441,7 +503,7 @@ fun ClassicBingoGameScreen(
                                 ) {
                                     Text(
                                         text = letter,
-                                        fontSize = 14.sp,
+                                        fontSize = 15.sp,
                                         fontWeight = FontWeight.Black,
                                         color = animTextColor
                                     )
@@ -451,7 +513,7 @@ fun ClassicBingoGameScreen(
                                             imageVector = Icons.Default.Check,
                                             contentDescription = null,
                                             tint = Color.Black,
-                                            modifier = Modifier.size(12.dp)
+                                            modifier = Modifier.size(14.dp)
                                         )
                                     }
                                 }
@@ -462,7 +524,7 @@ fun ClassicBingoGameScreen(
             }
         },
         bottomBar = {
-            // Fixed Bottom Action Bar: Reactions & Claim Bingo CTA (Guaranteed non-overflowing)
+            // Fixed Bottom Action Bar: High Contrast Reactions & Claim Bingo CTA
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 color = ArcadeInverseSurface,
@@ -478,21 +540,22 @@ fun ClassicBingoGameScreen(
                     // Quick Chat Reactions Strip
                     LazyRow(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(listOf("🔥 GG!", "👏 Nice!", "⚡ Fast!", "😎 Watch me!", "🍀 Lucky!", "😱 Wow!")) { reaction ->
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(16.dp))
-                                    .background(ArcadeSurfaceContainer)
+                                    .background(ArcadeSurfaceContainerHighest)
+                                    .border(1.dp, TournamentGold.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
                                     .clickable { onSendReaction(reaction) }
-                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                                    .padding(horizontal = 12.dp, vertical = 6.dp)
                             ) {
                                 Text(
                                     text = reaction,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = ArcadeInverseOnSurface
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color.White
                                 )
                             }
                         }

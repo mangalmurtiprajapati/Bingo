@@ -76,6 +76,10 @@ data class ClassicMatchState(
     val activeChallengeId: String? = null,
     val isHost: Boolean = true,
     val isOnlineMatchReady: Boolean = false,
+    val p1ConsecutiveMisses: Int = 0,
+    val p2ConsecutiveMisses: Int = 0,
+    val pendingHostChallenge: OnlineDuelRoom? = null,
+    val isWaitingForHostAccept: Boolean = false,
     val friendsList: List<FriendProfile> = listOf(
         FriendProfile("Rohan_Star", 3, "Won 12 duels", isOnline = true, avatarEmoji = "🔥"),
         FriendProfile("Priya_Mind", 2, "Won 8 duels", isOnline = true, avatarEmoji = "🌸"),
@@ -497,7 +501,9 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
             cutHistory = emptyList(),
             coinsEarned = 0,
             xpEarned = 0,
-            viewingBoardPlayer = 1
+            viewingBoardPlayer = 1,
+            p1ConsecutiveMisses = 0,
+            p2ConsecutiveMisses = 0
         )
     }
 
@@ -694,6 +700,9 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
         }
 
         // If game continues:
+        val resetP1Misses = if (state.matchTurn == MatchTurn.PLAYER_1_TURN) 0 else state.p1ConsecutiveMisses
+        val resetP2Misses = if (state.matchTurn != MatchTurn.PLAYER_1_TURN) 0 else state.p2ConsecutiveMisses
+
         if (state.gameMode == GameMode.VS_COMPUTER) {
             _classicState.value = state.copy(
                 player1Board = updatedP1Board,
@@ -702,7 +711,9 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
                 lastCutBy = cutByName,
                 cutHistory = updatedHistory,
                 matchTurn = MatchTurn.PLAYER_2_OR_COMPUTER_TURN,
-                isComputerThinking = true
+                isComputerThinking = true,
+                p1ConsecutiveMisses = resetP1Misses,
+                p2ConsecutiveMisses = resetP2Misses
             )
             triggerComputerTurn()
         } else if (state.gameMode == GameMode.PLAY_WITH_FRIEND) {
@@ -718,7 +729,9 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
                 lastCutBy = cutByName,
                 cutHistory = updatedHistory,
                 matchTurn = nextTurn,
-                viewingBoardPlayer = if (nextTurn == MatchTurn.PLAYER_1_TURN) 1 else 2
+                viewingBoardPlayer = if (nextTurn == MatchTurn.PLAYER_1_TURN) 1 else 2,
+                p1ConsecutiveMisses = resetP1Misses,
+                p2ConsecutiveMisses = resetP2Misses
             )
         } else {
             // Online mode (Synchronized via Firestore Duel Room or Smart AI Fallback)
@@ -730,7 +743,9 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
                 lastCutBy = cutByName,
                 cutHistory = updatedHistory,
                 matchTurn = MatchTurn.PLAYER_2_OR_COMPUTER_TURN,
-                isComputerThinking = true
+                isComputerThinking = true,
+                p1ConsecutiveMisses = resetP1Misses,
+                p2ConsecutiveMisses = resetP2Misses
             )
 
             if (state.isOnlineBot || state.gameMode == GameMode.VS_COMPUTER) {
@@ -911,6 +926,80 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
         initClassicGame(current.gameMode)
     }
 
+    /**
+     * 15-second turn timer timeout handler:
+     * - Auto-cuts a random uncrossed number from active board
+     * - Tracks consecutive timeouts (misses)
+     * - If player reaches 3 consecutive misses, awards victory to opponent!
+     */
+    fun handleTurnTimeout() {
+        val state = _classicState.value
+        if (state.matchOutcome != MatchOutcome.IN_PROGRESS) return
+
+        val isP1Turn = state.matchTurn == MatchTurn.PLAYER_1_TURN
+        val board = if (isP1Turn) state.player1Board else state.player2OrComputerBoard
+
+        // Find all numbers on the board that are not yet crossed
+        val uncrossed = (1..25).filter { !board.isNumberCrossed(it) }
+        if (uncrossed.isEmpty()) return
+
+        val randomPick = uncrossed.random()
+
+        if (isP1Turn) {
+            val newMisses = state.p1ConsecutiveMisses + 1
+            if (newMisses >= 3) {
+                // 3 consecutive missed turns: Disqualification, opponent wins immediately!
+                _classicState.value = state.copy(
+                    p1ConsecutiveMisses = newMisses,
+                    matchOutcome = MatchOutcome.COMPUTER_OR_PLAYER_2_WON,
+                    onlineStatusMessage = "3 Consecutive Turn Timeouts! Disqualified.",
+                    coinsEarned = 25,
+                    xpEarned = 25
+                )
+                soundManager.stopAmbientMusic()
+                soundManager.playCrossSound()
+                postOpponentReaction("⚠️ Disqualified: 3 missed turns in a row!")
+                viewModelScope.launch {
+                    repository.recordGameFinished(
+                        isWin = false,
+                        daubsMade = state.player1Board.crossedNumbers.size,
+                        coinsEarned = 25
+                    )
+                }
+                return
+            }
+
+            _classicState.value = state.copy(p1ConsecutiveMisses = newMisses)
+            cutNumber(randomPick)
+        } else {
+            val newMisses = state.p2ConsecutiveMisses + 1
+            if (newMisses >= 3) {
+                // Opponent missed 3 consecutive turns: Player 1 wins!
+                _classicState.value = state.copy(
+                    p2ConsecutiveMisses = newMisses,
+                    matchOutcome = MatchOutcome.PLAYER_WON,
+                    onlineStatusMessage = "Opponent missed 3 turns! You Win!",
+                    coinsEarned = 300,
+                    xpEarned = 200
+                )
+                soundManager.stopAmbientMusic()
+                soundManager.playWinFanfare()
+                postOpponentReaction("🎉 Opponent forfeited after 3 timeouts! Victory!")
+                viewModelScope.launch {
+                    repository.recordGameFinished(
+                        isWin = true,
+                        daubsMade = state.player1Board.crossedNumbers.size,
+                        coinsEarned = 300
+                    )
+                }
+                return
+            }
+
+            _classicState.value = state.copy(p2ConsecutiveMisses = newMisses)
+            cutNumber(randomPick)
+        }
+    }
+
     private var onlineSearchJob: Job? = null
 
     // =========================================================================
@@ -953,9 +1042,10 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
             roomCode = cleanCode,
             isOnlineSearching = false,
             isHost = false,
-            isOnlineMatchReady = true,
+            isOnlineMatchReady = false,
+            isWaitingForHostAccept = true,
             currentUserId = myUid,
-            onlineStatusMessage = "Joining Room #$cleanCode...",
+            onlineStatusMessage = "Challenge sent to Host of PIN #$cleanCode! Awaiting acceptance...",
             gameMode = GameMode.PLAY_ONLINE
         )
 
@@ -964,23 +1054,69 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
                 roomId = cleanCode,
                 guestId = myUid,
                 guestName = stats.userName,
-                guestAvatar = stats.userAvatar
-            )
-
-            val oppName = _activeDuelRoom.value?.hostName ?: "Host Player"
-            val oppLevel = _classicState.value.challengeLevel.coerceIn(1, 5)
-
-            _classicState.value = _classicState.value.copy(
-                isOnlineMatchReady = true,
-                matchedOpponentName = oppName,
-                matchedOpponentLevel = oppLevel,
-                onlineStatusMessage = "Joined Room #$cleanCode! Match ready.",
-                gameMode = GameMode.PLAY_ONLINE
+                guestAvatar = stats.userAvatar,
+                asChallenge = true
             )
             attachRoomListener(cleanCode, myUid)
-            initClassicGame(GameMode.PLAY_ONLINE, forcedOpponentName = oppName)
             onJoined()
         }
+    }
+
+    /**
+     * Host accepts the incoming PIN duel challenge from guest
+     */
+    fun acceptPendingHostChallenge() {
+        val room = _classicState.value.pendingHostChallenge ?: return
+        val guestName = room.guestName ?: "Challenger"
+        val guestAvatar = room.guestAvatar ?: "⚔️"
+
+        _classicState.value = _classicState.value.copy(
+            pendingHostChallenge = null,
+            isOnlineMatchReady = true,
+            isOnlineBot = false,
+            isSimultaneousFriendMode = true,
+            matchedOpponentName = guestName,
+            opponentAvatar = guestAvatar,
+            onlineStatusMessage = "⚔️ Challenge Accepted! Duel starting with $guestName!",
+            gameMode = GameMode.PLAY_ONLINE
+        )
+
+        viewModelScope.launch {
+            firestoreOnlineManager.acceptRoomChallenge(room.roomId)
+            soundManager.playWinFanfare()
+            initClassicGame(GameMode.PLAY_ONLINE, forcedOpponentName = guestName, forcedOpponentAvatar = guestAvatar)
+        }
+    }
+
+    /**
+     * Host declines the incoming PIN duel challenge
+     */
+    fun declinePendingHostChallenge() {
+        val room = _classicState.value.pendingHostChallenge ?: return
+        _classicState.value = _classicState.value.copy(
+            pendingHostChallenge = null,
+            onlineStatusMessage = "Declined duel from ${room.guestName ?: "player"}."
+        )
+        viewModelScope.launch {
+            firestoreOnlineManager.declineRoomChallenge(room.roomId)
+        }
+    }
+
+    /**
+     * Guest cancels waiting for host
+     */
+    fun cancelWaitingForHost() {
+        val roomCode = _classicState.value.roomCode
+        val myUid = _classicState.value.currentUserId
+        viewModelScope.launch {
+            firestoreOnlineManager.leaveRoom(roomCode, myUid)
+        }
+        _classicState.value = _classicState.value.copy(
+            isWaitingForHostAccept = false,
+            onlineStatusMessage = "Cancelled joining room."
+        )
+        roomListenerJob?.cancel()
+        _activeDuelRoom.value = null
     }
 
     fun startQuickOnlineMatch(onMatched: () -> Unit = {}) {
@@ -1359,19 +1495,46 @@ class BingoGameViewModel(application: Application) : AndroidViewModel(applicatio
                         )
                     }
 
-                    // BOTH HOST AND GUEST DETECT MATCH READY!
-                    if (room.guestId != null && !_classicState.value.isOnlineMatchReady) {
+                    // 1. Host receives incoming challenge from friend who entered PIN
+                    if (room.status == RoomStatus.CHALLENGE_PENDING) {
+                        if (room.hostId == myUid && room.guestId != null) {
+                            _classicState.value = _classicState.value.copy(
+                                pendingHostChallenge = room,
+                                onlineStatusMessage = "⚔️ ${room.guestName} entered PIN #${room.roomId}!"
+                            )
+                        } else if (room.guestId == myUid) {
+                            _classicState.value = _classicState.value.copy(
+                                isWaitingForHostAccept = true,
+                                onlineStatusMessage = "Challenge sent! Waiting for Host to accept..."
+                            )
+                        }
+                    }
+
+                    // 2. Guest sees host declined
+                    if (room.status == RoomStatus.DECLINED && room.guestId == myUid) {
+                        _classicState.value = _classicState.value.copy(
+                            isWaitingForHostAccept = false,
+                            onlineStatusMessage = "Host declined the duel request."
+                        )
+                    }
+
+                    // 3. Match Starts for BOTH Host and Guest once host accepts (or matchmaking joins)
+                    if ((room.status == RoomStatus.PLAYERS_JOINED || room.status == RoomStatus.IN_PROGRESS) &&
+                        room.guestId != null && !_classicState.value.isOnlineMatchReady) {
                         val opponentDisplayName = if (room.hostId == myUid) (room.guestName ?: "Friend") else (room.hostName ?: "Host")
                         val opponentAvatarEmoji = if (room.hostId == myUid) (room.guestAvatar ?: "⚔️") else room.hostAvatar
                         _classicState.value = _classicState.value.copy(
                             isOnlineMatchReady = true,
+                            isWaitingForHostAccept = false,
+                            pendingHostChallenge = null,
+                            isOnlineBot = false,
                             matchedOpponentName = opponentDisplayName,
                             opponentAvatar = opponentAvatarEmoji,
-                            onlineStatusMessage = "Match Found! $opponentDisplayName joined the room!",
+                            onlineStatusMessage = "Duel Started with $opponentDisplayName!",
                             gameMode = GameMode.PLAY_ONLINE
                         )
                         soundManager.playWinFanfare()
-                        initClassicGame(GameMode.PLAY_ONLINE, forcedOpponentName = opponentDisplayName)
+                        initClassicGame(GameMode.PLAY_ONLINE, forcedOpponentName = opponentDisplayName, forcedOpponentAvatar = opponentAvatarEmoji)
                     }
 
                     // Opponent made a move!

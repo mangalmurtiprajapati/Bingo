@@ -446,29 +446,80 @@ class FirestoreOnlineManager {
 
     /**
      * Joins an existing room as a guest.
+     * When asChallenge = true (Private Room PIN), status is set to CHALLENGE_PENDING so host receives prompt to accept.
      */
     suspend fun joinRoom(
         roomId: String,
         guestId: String,
         guestName: String,
-        guestAvatar: String
+        guestAvatar: String,
+        asChallenge: Boolean = false
     ): Result<Unit> {
         val fs = firestore ?: return Result.failure(IllegalStateException("Firestore not available"))
         return try {
+            val statusToSet = if (asChallenge) RoomStatus.CHALLENGE_PENDING else RoomStatus.PLAYERS_JOINED
             fs.collection(ROOMS_COLLECTION).document(roomId)
-                .update(
+                .set(
                     mapOf(
                         "guestId" to guestId,
                         "guestName" to guestName,
                         "guestAvatar" to guestAvatar,
-                        "status" to RoomStatus.PLAYERS_JOINED,
+                        "status" to statusToSet,
                         "updatedAt" to System.currentTimeMillis()
-                    )
+                    ),
+                    SetOptions.merge()
                 ).await()
-            Log.d(TAG, "Joined room: $roomId as guest $guestName")
+            Log.d(TAG, "Joined room: $roomId as guest $guestName (status=$statusToSet)")
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Error joining room: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Host accepts the incoming PIN duel challenge from guest
+     */
+    suspend fun acceptRoomChallenge(roomId: String): Result<Unit> {
+        val fs = firestore ?: return Result.failure(IllegalStateException("Firestore not available"))
+        return try {
+            fs.collection(ROOMS_COLLECTION).document(roomId)
+                .set(
+                    mapOf(
+                        "status" to RoomStatus.PLAYERS_JOINED,
+                        "updatedAt" to System.currentTimeMillis()
+                    ),
+                    SetOptions.merge()
+                ).await()
+            Log.d(TAG, "Host accepted duel challenge for room: $roomId")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error accepting room challenge: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Host declines the incoming PIN duel challenge from guest
+     */
+    suspend fun declineRoomChallenge(roomId: String): Result<Unit> {
+        val fs = firestore ?: return Result.failure(IllegalStateException("Firestore not available"))
+        return try {
+            fs.collection(ROOMS_COLLECTION).document(roomId)
+                .set(
+                    mapOf(
+                        "guestId" to null,
+                        "guestName" to null,
+                        "guestAvatar" to null,
+                        "status" to RoomStatus.DECLINED,
+                        "updatedAt" to System.currentTimeMillis()
+                    ),
+                    SetOptions.merge()
+                ).await()
+            Log.d(TAG, "Host declined duel challenge for room: $roomId")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error declining room challenge: ${e.message}", e)
             Result.failure(e)
         }
     }

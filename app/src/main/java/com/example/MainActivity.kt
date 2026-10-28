@@ -168,6 +168,9 @@ fun KidsBingoApp(
                 onCutNumber = { number ->
                     viewModel.cutNumber(number)
                 },
+                onTurnTimeout = {
+                    viewModel.handleTurnTimeout()
+                },
                 onRematch = {
                     viewModel.rematchClassicGame()
                     navController.navigate("classic_setup") {
@@ -258,6 +261,16 @@ fun KidsBingoApp(
                 },
                 onCancelOutgoingChallenge = {
                     viewModel.cancelOutgoingChallenge()
+                },
+                onAcceptHostChallenge = {
+                    viewModel.acceptPendingHostChallenge()
+                    navController.navigate("classic_setup")
+                },
+                onDeclineHostChallenge = {
+                    viewModel.declinePendingHostChallenge()
+                },
+                onCancelWaitingForHost = {
+                    viewModel.cancelWaitingForHost()
                 },
                 onProceedToSetup = {
                     navController.navigate("classic_setup")

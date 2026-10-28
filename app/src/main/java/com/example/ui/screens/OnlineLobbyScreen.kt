@@ -48,10 +48,12 @@ import androidx.compose.material.icons.filled.Pin
 import androidx.compose.material.icons.filled.Radar
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -59,6 +61,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import com.example.util.NetworkUtils
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -137,12 +140,16 @@ fun OnlineLobbyScreen(
     onAcceptChallenge: (FriendChallenge) -> Unit = {},
     onRejectChallenge: (FriendChallenge) -> Unit = {},
     onCancelOutgoingChallenge: () -> Unit = {},
+    onAcceptHostChallenge: () -> Unit = {},
+    onDeclineHostChallenge: () -> Unit = {},
+    onCancelWaitingForHost: () -> Unit = {},
     onProceedToSetup: () -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
     BackHandler { onBack() }
 
+    val isNetworkConnected = remember { NetworkUtils.isNetworkAvailable(context) }
     var selectedTab by remember { mutableStateOf("ranked") } // "ranked", "private", "online"
     var pinInputValue by remember { mutableStateOf("") }
     var lobbyFormat by remember { mutableStateOf("1v1") }
@@ -213,6 +220,42 @@ fun OnlineLobbyScreen(
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
+                // Network Connectivity Banner
+                if (!isNetworkConnected) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color(0xFF351A22),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFF5252))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.WifiOff,
+                                contentDescription = null,
+                                tint = Color(0xFFFF5252),
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "OFFLINE MODE DETECTED",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color(0xFFFF5252)
+                                )
+                                Text(
+                                    text = "Internet required for 1v1 online duels. You can still play vs Computer & Solo Blitz!",
+                                    fontSize = 11.sp,
+                                    color = Color.White.copy(alpha = 0.9f)
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // 1. Mode Quick Tabs
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -422,7 +465,13 @@ fun OnlineLobbyScreen(
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 Button(
-                                    onClick = onQuickMatch,
+                                    onClick = {
+                                        if (!isNetworkConnected) {
+                                            Toast.makeText(context, "Internet required for online matchmaking", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            onQuickMatch()
+                                        }
+                                    },
                                     colors = ButtonDefaults.buttonColors(containerColor = ArcadePrimary),
                                     shape = RoundedCornerShape(24.dp),
                                     modifier = Modifier
@@ -786,7 +835,9 @@ fun OnlineLobbyScreen(
 
                                     Button(
                                         onClick = {
-                                            if (pinInputValue.isNotBlank()) {
+                                            if (!isNetworkConnected) {
+                                                Toast.makeText(context, "Internet required to join online rooms", Toast.LENGTH_SHORT).show()
+                                            } else if (pinInputValue.isNotBlank()) {
                                                 onJoinRoom(pinInputValue.trim())
                                             } else {
                                                 Toast.makeText(context, "Enter a 4-digit PIN", Toast.LENGTH_SHORT).show()
@@ -1046,6 +1097,123 @@ fun OnlineLobbyScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Enter Arena 🚀", color = Color.Black, fontWeight = FontWeight.Black)
+                    }
+                }
+            }
+        }
+    }
+
+    // Modal: Host Received PIN Challenge Request
+    if (state.pendingHostChallenge != null) {
+        val incoming = state.pendingHostChallenge
+        Dialog(onDismissRequest = { onDeclineHostChallenge() }) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                shape = RoundedCornerShape(22.dp),
+                color = ArcadeInverseSurface,
+                shadowElevation = 16.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(22.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(58.dp)
+                            .clip(CircleShape)
+                            .background(TournamentGold),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(text = incoming.guestAvatar ?: "⚔️", fontSize = 28.sp)
+                    }
+
+                    Text(
+                        text = "INCOMING DUEL CHALLENGE! ⚔️",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Black,
+                        color = TournamentGold,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Text(
+                        text = "Friend ${incoming.guestName ?: "Opponent"} entered your Room PIN #${incoming.roomId}!\nAccept to start the live 1v1 duel together?",
+                        fontSize = 14.sp,
+                        color = ArcadeInverseOnSurface,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Button(
+                            onClick = onDeclineHostChallenge,
+                            colors = ButtonDefaults.buttonColors(containerColor = ArcadeSurfaceContainerHigh),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Decline", color = ArcadeOnSurface, fontWeight = FontWeight.Bold)
+                        }
+
+                        Button(
+                            onClick = onAcceptHostChallenge,
+                            colors = ButtonDefaults.buttonColors(containerColor = TournamentGold),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Accept Duel ⚔️", color = Color.Black, fontWeight = FontWeight.Black)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Modal: Guest Waiting For Host Acceptance
+    if (state.isWaitingForHostAccept) {
+        Dialog(onDismissRequest = onCancelWaitingForHost) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                shape = RoundedCornerShape(22.dp),
+                color = ArcadeSurfaceContainerLowest,
+                shadowElevation = 12.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(22.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    CircularProgressIndicator(
+                        color = ArcadePrimary,
+                        modifier = Modifier.size(44.dp)
+                    )
+
+                    Text(
+                        text = "WAITING FOR HOST... ⏳",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Black,
+                        color = ArcadeOnSurface
+                    )
+
+                    Text(
+                        text = "Joined Room PIN #${state.roomCode}.\nWaiting for host to accept your duel request...",
+                        fontSize = 13.sp,
+                        color = ArcadeOnSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Button(
+                        onClick = onCancelWaitingForHost,
+                        colors = ButtonDefaults.buttonColors(containerColor = ArcadeSurfaceContainerHigh),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Cancel Request", color = ArcadeOnSurface, fontWeight = FontWeight.Bold)
                     }
                 }
             }
